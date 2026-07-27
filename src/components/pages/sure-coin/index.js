@@ -2,21 +2,13 @@ import React, { useContext, useEffect, useState } from "react";
 import RotatingCoin from "./rotating-coin";
 import CoinStakeChoice from "./coin-stake-choice";
 import { Context } from "../../../context/store";
-import { FaCog, FaComments, FaInfo, FaQuestion } from "react-icons/fa";
-import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
-import { IoIosClose } from "react-icons/io";
-import { Link } from "react-router-dom";
-import DepositModal from "../../webmodals/deposit-modal";
+import { getFromLocalStorage } from "../../utils/local-storage";
 import { BiSolidVolumeMute } from "react-icons/bi";
 import { FaVolumeHigh } from "react-icons/fa6";
 import SureCoinLogoImg from '../../../assets/img/svgicons/surecoin.svg';
 import makeRequest from "../../utils/fetch-request";
 import CryptoJS from "crypto-js";
-import Notify from "../../utils/Notify";
-import { error } from "logrocket";
 import TakeBetsTimer from "./take-bets-timer";
-import Head from "../../../assets/img/casino/head.png";
-import Tail from "../../../assets/img/casino/tail.png";
 import SoundInteractPrompt from "./sound-interact-prompt";
 
 
@@ -338,8 +330,6 @@ const SureCoinIndex = (props) => {
                 </div> */}
             </div>
         </div>
-
-        {/* <DepositModal /> */}
         
         </>
     )

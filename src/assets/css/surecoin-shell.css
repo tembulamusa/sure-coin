@@ -1,0 +1,12 @@
+/* Minimal shell styles needed by SureCoin fullscreen layout */
+.launched-casino-wrapper {
+    background-color: rgb(11, 18, 27);
+    min-height: 100vh;
+    color: #ffffff;
+    overflow-y: auto;
+    overflow-x: clip;
+}
+
+.launched-casino-wrapper .amt {
+    /* margin-top: 0 !important; */
+}

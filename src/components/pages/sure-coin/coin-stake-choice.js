@@ -4,7 +4,6 @@ import { Context } from "../../../context/store";
 import { FaCheckCircle, FaMinus } from "react-icons/fa";
 import { CgAdd, CgRemove } from "react-icons/cg";
 import { Switch } from "@mui/material";
-import { type } from "@testing-library/user-event/dist/cjs/utility/index.js";
 import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
 
 const CoinStakeChoice = (props) => {

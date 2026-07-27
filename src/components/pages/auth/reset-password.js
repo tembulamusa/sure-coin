@@ -2,11 +2,6 @@ import React, { useState } from 'react';
 import { Formik, Form } from 'formik';
 import makeRequest from "../../utils/fetch-request";
 
-const Header = React.lazy(() => import('../../header/header'));
-const SideBar = React.lazy(() => import('../../sidebar/awesome/Sidebar'));
-const Right = React.lazy(() => import('../../right/index'));
-const Footer = React.lazy(() => import('../../footer/footer'));
-
 const ResetPassword = (props) => {
 
     const [success, setSuccess] = useState(false);
@@ -261,21 +256,13 @@ const ResetPassword = (props) => {
     };
 
     return (
-        <div className='container-fluid'>
-            <div className='row'>
-                <Header />
-                <div className='col-md-3 sidebar'>
-                    <SideBar />
+        <div className='container-fluid py-5'>
+            <div className='row justify-content-center'>
+                <div className='col-md-6 main'>
+                    <FormTitle />
+                    {success && <Alert />}
+                    {otp_sent ? <PasswordResetForm /> : <OptForm />}
                 </div>
-                <div className='col-md-9 main'>
-                    <div className='row'>
-                        <FormTitle />
-                        {success && <Alert />}
-                        {otp_sent ? <PasswordResetForm /> : <OptForm />}
-                    </div>
-                </div>
-                <Right />
-                <Footer />
             </div>
         </div>
     );

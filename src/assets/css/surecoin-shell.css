@@ -1,12 +1,1863 @@
-/* Minimal shell styles needed by SureCoin fullscreen layout */
-.launched-casino-wrapper {
-    background-color: rgb(11, 18, 27);
-    min-height: 100vh;
-    color: #ffffff;
-    overflow-y: auto;
-    overflow-x: clip;
+/* Surecoin shell — screenshot layout & dark charcoal theme */
+:root {
+  --sc-bg: #0d0d0d;
+  --sc-panel: #161616;
+  --sc-panel-2: #1c1c1c;
+  --sc-border: rgba(255, 255, 255, 0.08);
+  --sc-yellow: #ffc107;
+  --sc-yellow-dim: #ffb200;
+  --sc-green: #34c759;
+  --sc-text: #ffffff;
+  --sc-muted: #9a9a9a;
+  --sc-radius: 14px;
+  /*
+   * Layout tokens — primary desktop target is a ≤960px-wide host iframe
+   * (not a full monitor). Two-column grid stays up until the stack breakpoint.
+   */
+  --sc-iframe-max: 960px;
+  --sc-sidebar-min: 260px;
+  --sc-sidebar-max: 300px;
+  /* Modest right/bottom breathing room; left/top stay flush with iframe */
+  --sc-body-inset-r: 1px;
+  --sc-body-inset-b: 1px;
+  --sc-stack-bp: 720px;
 }
 
-.launched-casino-wrapper .amt {
-    /* margin-top: 0 !important; */
+/* Full-viewport height/width chain — fills the iframe (100% / 100dvh of iframe) */
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.launched-casino-wrapper {
+  background-color: var(--sc-bg);
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--sc-text);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.launched-sure-coin {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse 70% 45% at 55% 20%, rgba(255, 193, 7, 0.06), transparent 55%),
+    linear-gradient(180deg, #121212 0%, var(--sc-bg) 35%, #0a0a0a 100%);
+}
+
+.surecoin-body {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  /* Flush left/top; soft inset on right + bottom for rounded outer frame */
+  padding: 0 var(--sc-body-inset-r) var(--sc-body-inset-b) 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Header */
+.sc-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  /* Full-bleed with layout — same flush left/right edges */
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--sc-border);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
+.sc-header-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sc-header-brand .surecoin-logo-img {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: min(200px, 46vw);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.sc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sc-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.sc-balance-label {
+  color: var(--sc-text);
+}
+
+.sc-balance-value {
+  color: var(--sc-yellow);
+  font-weight: 800;
+}
+
+.sc-sound-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--sc-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.sc-sound-btn:hover {
+  border-color: var(--sc-yellow);
+  color: var(--sc-yellow);
+}
+
+/* Layout — fills remaining iframe height under header; equal-height columns.
+ * Sidebar capped ~300px so the game/bet column stays usable at ≤960px. */
+.sc-layout {
+  display: grid;
+  grid-template-columns: minmax(var(--sc-sidebar-min), var(--sc-sidebar-max)) minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  /* Flush under header — no outer body gutter */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sc-main-column {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.casino-service-sure-coin {
+  background: var(--sc-panel);
+  border: 1px solid var(--sc-border);
+  border-radius: 0 var(--sc-radius) var(--sc-radius) 0;
+  padding: 10px;
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.coin-settings {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+}
+
+/*
+ * Betting sidebar shell: equal-height with main/right game panel.
+ * Outer shell stretches to row height; 6px inset; outer does not scroll.
+ * Inner leftbar is fixed within the padded shell; content scrolls inside.
+ */
+.sc-betting-sidebar-shell {
+  background: rgba(0, 0, 0, 0.1);
+  /* Thin shell outline — matches leftbar soft stroke */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  /* Outer left corners rounded; square right edge joins main bet panel */
+  border-radius: var(--sc-radius) 0 0 var(--sc-radius);
+  padding: 6px;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sc-betting-sidebar {
+  background: #121212;
+  /* Soft inner outline — lower opacity than shell */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 10px 8px 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sc-bets-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 0 10px;
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.sc-bets-tab {
+  position: relative;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #8e8e8e;
+  padding: 8px 4px 10px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border-radius: 0;
+  transition: color 0.15s ease;
+}
+
+.sc-bets-tab:hover {
+  color: #ddd;
+}
+
+.sc-bets-tab.active {
+  color: var(--sc-yellow);
+  background: transparent;
+}
+
+.sc-bets-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  transform: translateX(-50%);
+  width: 48%;
+  max-width: 52px;
+  height: 2px;
+  border-radius: 0;
+  background: var(--sc-yellow);
+}
+
+.sc-bets-panel-host,
+.sc-bets-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sc-bets-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px 4px 10px;
+  background: transparent;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.sc-bets-summary-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sc-avatar-stack {
+  display: flex;
+  align-items: center;
+}
+
+.sc-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #111;
+  border: 2px solid #121212;
+  margin-left: -8px;
+}
+
+.sc-avatar:first-child {
+  margin-left: 0;
+}
+
+.sc-avatar-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 0.65rem;
+  margin-left: 0;
+  border-width: 0;
+  flex-shrink: 0;
+}
+
+.sc-bets-progress-block {
+  min-width: 0;
+  max-width: 160px;
+}
+
+.sc-bets-progress-meta {
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.sc-bets-progress-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sc-bets-progress-fill {
+  height: 100%;
+  background: var(--sc-yellow);
+  border-radius: 2px;
+  transition: width 0.35s ease;
+}
+
+.sc-total-win {
+  text-align: right;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.sc-total-win-value {
+  color: var(--sc-yellow);
+  font-weight: 800;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.sc-total-win-label {
+  color: #9a9a9a;
+  font-size: 0.7rem;
+  margin-top: 3px;
+}
+
+.sc-bets-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* No visible nested scrollbar chrome on the left bar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sc-bets-table-wrap::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.sc-bets-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  font-size: 0.78rem;
+}
+
+.sc-bets-table thead th {
+  color: #9a9a9a;
+  font-weight: 500;
+  text-align: left;
+  padding: 4px 6px 8px;
+  border: none;
+  background: #121212;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sc-bets-table tbody tr td {
+  padding: 8px 6px;
+  border: none;
+  color: #fff;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+}
+
+.sc-bets-table tbody tr td:first-child {
+  border-radius: 999px 0 0 999px;
+  padding-left: 10px;
+}
+
+.sc-bets-table tbody tr td:last-child {
+  border-radius: 0 999px 999px 0;
+  padding-right: 10px;
+}
+
+.sc-bets-table tbody tr.is-win td {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.sc-bets-table th:nth-child(2),
+.sc-bets-table td:nth-child(2),
+.sc-bets-table th:nth-child(3),
+.sc-bets-table td:nth-child(3),
+.sc-bets-table th:nth-child(4),
+.sc-bets-table td:nth-child(4) {
+  text-align: right;
+}
+
+.sc-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sc-win-amount {
+  color: var(--sc-green) !important;
+  font-weight: 700;
+}
+
+.sc-bet-choice {
+  display: inline-block;
+  min-width: 1.1em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.sc-bet-choice.is-heads {
+  color: #7dcea0;
+}
+
+.sc-bet-choice.is-tails {
+  color: #f1948a;
+}
+
+.sc-bets-empty {
+  flex: 1 1 auto;
+  color: var(--sc-muted);
+  text-align: center;
+  padding: 28px 10px;
+  font-size: 0.85rem;
+  background: transparent;
+  border-radius: 0;
+}
+
+.sc-bets-loading {
+  color: var(--sc-yellow);
+}
+
+.sc-view-more {
+  margin-top: 8px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.sc-view-more svg {
+  color: var(--sc-yellow);
+  font-size: 1.25rem;
+}
+
+.sc-view-more:hover {
+  opacity: 0.85;
+}
+
+/* Game display — footer (countdown) must stay visible above bet panel */
+.sc-game-display {
+  margin-bottom: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bet-control {
+  flex-shrink: 0;
+}
+
+.sc-game-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sc-outcome-panel {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--sc-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 76px;
+  max-width: 110px;
+  z-index: 2;
+}
+
+.sc-outcome-label {
+  color: var(--sc-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.sc-outcome-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sc-outcome-coin {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.sc-outcome-value {
+  color: var(--sc-yellow);
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+}
+
+.sc-stats-panel {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--sc-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 112px;
+  max-width: 150px;
+  z-index: 2;
+}
+
+.sc-stats-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+
+.sc-stats-icon {
+  color: var(--sc-muted);
+}
+
+.sc-stats-icon.sc-heads {
+  color: #66bb6a;
+}
+
+.sc-stats-icon.sc-tails {
+  color: #ef5350;
+}
+
+.sc-stats-label {
+  color: var(--sc-muted);
+}
+
+.sc-stats-value {
+  font-weight: 700;
+}
+
+.rotating-images-wrapper {
+  grid-column: 2;
+  min-width: 0;
+  min-height: 200px;
+  border-radius: 18px;
+}
+
+.rotating-image-container {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sc-coin-stage {
+  position: relative;
+  perspective: 480px;
+  perspective-origin: 50% 34%;
+  transform-style: preserve-3d;
+  isolation: isolate;
+  /* Sit lower in the stage; avoid transform so 3D flip on .sc-coin-mesh stays intact */
+  margin-top: 54px;
+  padding-bottom: 14px;
+}
+
+/* Soft oval ground shadow under the coin (light — not a black plate) */
+.sc-coin-ground-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  z-index: 0;
+  width: 48%;
+  max-width: 100px;
+  height: 12px;
+  transform: translateX(-50%) scale(1);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.28) 0%,
+    rgba(0, 0, 0, 0.1) 45%,
+    transparent 72%
+  );
+  filter: blur(3px);
+  opacity: 0.55;
+  transform-origin: center center;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.sc-coin-ground-shadow.is-prep {
+  animation: scCoinShadowPrep 1.8s linear infinite;
+}
+
+.sc-coin-ground-shadow.is-spinning {
+  animation: scCoinShadowSpin 0.07s linear infinite;
+}
+
+.sc-coin-ground-shadow.is-settling {
+  animation: scCoinShadowSettle 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+}
+
+.rotating-img,
+.sc-coin-mesh {
+  height: clamp(140px, 22vh, 180px);
+  width: clamp(140px, 22vh, 180px);
+  margin: 20px auto 8px;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
+  /* No filter here — filter flattens preserve-3d in some browsers */
+}
+
+.rotating-img .coin-image,
+.sc-coin-mesh .coin-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent !important;
+  background-image: none !important;
+  border-radius: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  user-select: none;
+  pointer-events: none;
+  /* PNG art only — no rim disc / dark halo behind the coin */
+  box-shadow: none;
+  filter: none;
+}
+
+/* True coin mesh: heads on front, tails on reverse — slight Z for thickness */
+.coin-face--heads,
+.coin-image.heads {
+  transform: rotateY(0deg) translateZ(3px);
+}
+
+.coin-face--tails,
+.coin-image.tails {
+  transform: rotateY(180deg) translateZ(3px);
+}
+
+.sc-coin-mesh.is-spinning {
+  animation: coinFlipSpin 0.07s linear infinite;
+}
+
+.sc-coin-mesh.prep-to-start {
+  animation: coinPrepSpin 1.8s linear infinite;
+}
+
+.sc-coin-mesh.is-settling.settle-heads {
+  animation: coinSettleHeads 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+}
+
+.sc-coin-mesh.is-settling.settle-tails {
+  animation: coinSettleTails 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+}
+
+.sc-coin-mesh.face-heads {
+  transform: rotateY(0deg) rotateX(0deg);
+  transition: transform 0.35s ease-out;
+}
+
+.sc-coin-mesh.face-tails {
+  transform: rotateY(180deg) rotateX(0deg);
+  transition: transform 0.35s ease-out;
+}
+
+@keyframes coinFlipSpin {
+  0%   { transform: rotateY(0deg) rotateX(14deg); }
+  25%  { transform: rotateY(90deg) rotateX(-10deg); }
+  50%  { transform: rotateY(180deg) rotateX(14deg); }
+  75%  { transform: rotateY(270deg) rotateX(-10deg); }
+  100% { transform: rotateY(360deg) rotateX(14deg); }
+}
+
+@keyframes coinPrepSpin {
+  0%   { transform: rotateY(0deg) rotateX(6deg); }
+  100% { transform: rotateY(360deg) rotateX(6deg); }
+}
+
+@keyframes coinSettleHeads {
+  0%   { transform: rotateY(0deg) rotateX(16deg); }
+  100% { transform: rotateY(1440deg) rotateX(0deg); }
+}
+
+@keyframes coinSettleTails {
+  0%   { transform: rotateY(0deg) rotateX(16deg); }
+  100% { transform: rotateY(1620deg) rotateX(0deg); }
+}
+
+/* Ground shadow breathes with flip — narrower/fainter when coin is edge-on */
+@keyframes scCoinShadowSpin {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translateX(-50%) scaleX(0.78) scaleY(0.9);
+  }
+  25%,
+  75% {
+    opacity: 0.32;
+    transform: translateX(-50%) scaleX(0.48) scaleY(0.7);
+  }
+  50% {
+    opacity: 0.62;
+    transform: translateX(-50%) scaleX(0.74) scaleY(0.88);
+  }
+}
+
+@keyframes scCoinShadowPrep {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: translateX(-50%) scaleX(0.92) scaleY(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateX(-50%) scaleX(0.7) scaleY(0.85);
+  }
+}
+
+@keyframes scCoinShadowSettle {
+  0% {
+    opacity: 0.4;
+    transform: translateX(-50%) scaleX(0.55) scaleY(0.75);
+  }
+  100% {
+    opacity: 0.85;
+    transform: translateX(-50%) scaleX(1) scaleY(1);
+  }
+}
+
+.sc-game-footer {
+  margin-top: 2px;
+  text-align: center;
+  flex-shrink: 0;
+  /* Stable block: title + subtitle + timer — avoids column height jumps */
+  min-height: 4.75rem;
+}
+
+.sc-director {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 4px;
+  /* Lock 2-line instructional box so spin/wait swap doesn't collapse */
+  height: 2.6rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sc-director-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.sc-director-sub {
+  color: var(--sc-muted);
+  font-size: 0.78rem;
+  margin-top: 2px;
+  line-height: 1.25;
+  min-height: 1.25em;
+}
+
+.director-message {
+  display: none;
+}
+
+.coin-quick-stats {
+  display: none;
+}
+
+.sc-countdown,
+.sc-game-footer .bets-timer-empty-holder {
+  margin-top: 2px;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+.sc-countdown .time-left {
+  color: var(--sc-yellow);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.sc-countdown-track {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sc-countdown-fill {
+  height: 100%;
+  background: var(--sc-yellow);
+  border-radius: 4px;
+  transition: width 0.05s linear;
+}
+
+.bets-timer-empty-holder {
+  height: 34px;
+}
+
+/* Betting panel — charcoal shell; lifted input/auto surfaces (not inverted dark) */
+.sc-bet-panel {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--sc-border);
+  border-radius: 10px;
+  padding: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.sc-bet-panel-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+  align-items: stretch;
+}
+
+.sc-bet-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+}
+
+.sc-bet-field {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+}
+
+.sc-bet-field label {
+  color: #999;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+/* Uniform dark boxes — lighter than panel, thin #333 border */
+.sc-amount-stepper,
+.sc-odds-value,
+.sc-payout-value {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  height: 40px;
+  background: #1a1a1a;
+  border-radius: 9px;
+  padding: 6px 12px;
+  border: 1px solid #333;
+  box-sizing: border-box;
+}
+
+/* Amount: KES prefix flush to bar edges + end-aligned − / value / + stepper */
+.sc-amount-stepper {
+  gap: 8px;
+  padding: 0 6px 0 0;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.sc-currency {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  height: 100%;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px 4px 4px 8px;
+  padding: 0 10px;
+  line-height: 1;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+  box-sizing: border-box;
+}
+
+.sc-amount-controls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.sc-amount-input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  text-align: center;
+  outline: none;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.sc-amount-input::-webkit-outer-spin-button,
+.sc-amount-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sc-stepper-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #252525;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #fff;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sc-stepper-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+
+.sc-stepper-btn:hover {
+  color: #fff;
+  background: #333;
+}
+
+.sc-stepper-btn:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 1px;
+}
+
+.sc-odds-value {
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffbf00;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.sc-odds-x {
+  color: #ffbf00;
+  font-weight: 600;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.sc-odds-value strong {
+  font-weight: 800;
+  color: #ffbf00;
+  letter-spacing: 0.01em;
+}
+
+.sc-payout-value {
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sc-green);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.sc-bet-auto {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.sc-auto-card {
+  background: var(--sc-panel-2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 8px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.sc-auto-card--pick,
+.sc-auto-card--bet {
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0.6;
+}
+
+/* Icon + label on one horizontal row; toggle sits below */
+.sc-auto-head {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.sc-auto-icon {
+  color: #fff;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.sc-auto-label {
+  font-size: 0.72rem;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.sc-auto-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Pill toggle — dark track, white thumb (matches mockup) */
+.sc-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #2a2a2a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+
+.sc-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s ease;
+  pointer-events: none;
+}
+
+.sc-toggle.is-on {
+  background: var(--sc-yellow);
+  box-shadow: none;
+}
+
+.sc-toggle.is-on .sc-toggle-thumb {
+  transform: translateX(16px);
+}
+
+.sc-toggle:focus-visible {
+  outline: 2px solid rgba(255, 193, 7, 0.45);
+  outline-offset: 2px;
+}
+
+/* Compact rounds field under Auto Pick — same surface language as Amount/Odds */
+.sc-auto-rounds {
+  width: 100%;
+  max-width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  box-sizing: border-box;
+}
+
+.sc-auto-rounds input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.sc-auto-rounds input::-webkit-outer-spin-button,
+.sc-auto-rounds input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sc-auto-rounds.is-counting {
+  border-color: rgba(255, 193, 7, 0.35);
+}
+
+.sc-auto-rounds.is-counting input {
+  color: var(--sc-yellow);
+  cursor: text;
+}
+
+.sc-auto-card .autopick-hint {
+  font-size: 0.62rem;
+  color: var(--sc-yellow);
+  margin-top: -4px;
+  line-height: 1.1;
+}
+
+.sc-bet-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  padding-top: 0;
+  flex-shrink: 0;
+}
+
+.sc-side-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 10px 6px;
+  min-height: 60px;
+  height: 60px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  min-width: 0;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sc-side-btn:hover:not(.selected) {
+  background: #222;
+}
+
+.sc-side-btn.selected {
+  background: var(--sc-yellow);
+  color: #111;
+  border-color: var(--sc-yellow);
+  box-shadow: none;
+}
+
+.sc-side-btn.selected .sc-side-coin {
+  filter: brightness(0.35) contrast(1.1);
+}
+
+.sc-side-coin {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sc-picked-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: inherit;
+  font-size: 0.75rem;
+}
+
+.sc-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sc-yellow);
+  border: 1.5px solid var(--sc-yellow);
+  border-radius: 6px;
+  padding: 10px 6px;
+  min-height: 60px;
+  height: 60px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  min-width: 0;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.sc-confirm-btn svg {
+  font-size: 0.95rem;
+  color: inherit;
+}
+
+.sc-confirm-btn:hover:not(:disabled) {
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.sc-confirm-btn.disabled,
+.sc-confirm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--sc-yellow);
+  border-color: rgba(255, 193, 7, 0.45);
+  background: #1a1a1a;
+}
+
+.sc-confirm-btn.confirmed {
+  background: #1a1a1a;
+  border-color: var(--sc-green);
+  color: var(--sc-green);
+}
+
+.btn-place-surecoin-bet {
+  display: none;
+}
+
+/* Trust footer — sits inside the right game panel */
+.sc-trust-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 10px 6px 0;
+  color: var(--sc-muted);
+  font-size: 0.72rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.sc-trust-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sc-trust-sep {
+  opacity: 0.45;
+}
+
+/* Sound prompt — match parent: square left edge flush with sidebar */
+.sound-interact-prompt-cover {
+  border-radius: 0 var(--sc-radius) var(--sc-radius) 0;
+  background: rgba(13, 13, 13, 0.96);
+}
+
+.sound-interact-prompt-cover .sound-selector button {
+  border: none;
+}
+
+.sound-interact-prompt-cover .btn-success {
+  background: var(--sc-yellow);
+  color: #1a1400;
+}
+
+.sound-interact-prompt-cover .btn-danger {
+  background: #333;
+  color: #fff;
+}
+
+/* Mid iframe widths: keep two columns but tighten the place-bet row */
+@media screen and (max-width: 860px) and (min-width: 721px) {
+  :root {
+    --sc-sidebar-min: 240px;
+    --sc-sidebar-max: 280px;
+  }
+
+  .sc-layout {
+    grid-template-columns: minmax(var(--sc-sidebar-min), var(--sc-sidebar-max)) minmax(0, 1fr);
+  }
+
+  .sc-bet-field {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .sc-bet-field label {
+    font-size: 0.74rem;
+  }
+
+  .sc-auto-label {
+    font-size: 0.65rem;
+  }
+
+  .sc-side-btn,
+  .sc-confirm-btn {
+    gap: 4px;
+    padding: 8px 4px;
+  }
+
+  .sc-side-coin {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Responsive — stack only below iframe desktop; ≤960px keeps two columns + full height */
+@media screen and (max-width: 720px) {
+  .launched-casino-wrapper,
+  .launched-sure-coin,
+  .surecoin-body {
+    overflow: visible;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .sc-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    height: auto;
+    overflow: visible;
+    flex: 1 0 auto;
+  }
+
+  .sc-betting-sidebar-shell {
+    order: 2;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    /* Stacked: full outer radius (no side join) */
+    border-radius: var(--sc-radius);
+  }
+
+  .sound-interact-prompt-cover {
+    border-radius: var(--sc-radius);
+  }
+
+  .sc-betting-sidebar {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .sc-bets-panel-host,
+  .sc-bets-panel {
+    overflow: visible;
+  }
+
+  .sc-bets-table-wrap {
+    overflow: visible;
+  }
+
+  .sc-main-column {
+    order: 1;
+    height: auto;
+    overflow: visible;
+  }
+
+  .casino-service-sure-coin {
+    height: auto;
+    overflow: visible;
+    border-radius: var(--sc-radius);
+  }
+
+  .sc-game-stage {
+    grid-template-columns: 1fr;
+    min-height: 240px;
+  }
+
+  .sc-outcome-panel,
+  .sc-stats-panel {
+    position: absolute;
+    z-index: 4;
+    max-width: none;
+  }
+
+  .sc-outcome-panel {
+    left: 0;
+    top: 0;
+  }
+
+  .sc-stats-panel {
+    right: 0;
+    top: 0;
+  }
+
+  .rotating-images-wrapper {
+    grid-column: 1;
+    padding-top: 12px;
+  }
+
+  .sc-coin-stage {
+    margin-top: 28px;
+  }
+}
+
+@media screen and (max-width: 648px) {
+  .surecoin-body {
+    width: 100%;
+    /* Keep a slightly tighter right/bottom inset on narrow viewports */
+    padding: 0 1px 1px 0;
+  }
+
+  .sc-layout {
+    padding: 0;
+    gap: 8px;
+  }
+
+  .rotating-img,
+  .sc-coin-mesh {
+    width: 150px;
+    height: 150px;
+    margin-bottom: 16px;
+  }
+
+  .sc-coin-ground-shadow {
+    max-width: 88px;
+    height: 10px;
+    bottom: 4px;
+  }
+
+  .sc-bet-panel-top {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-bet-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sc-confirm-btn {
+    grid-column: 1 / -1;
+  }
+
+  .sc-header {
+    padding: 7px 0;
+  }
+
+  .sc-header-brand .surecoin-logo-img {
+    height: 28px;
+    max-width: min(168px, 48vw);
+  }
+
+  .sc-balance {
+    font-size: 0.82rem;
+  }
+
+  .sc-bets-tab {
+    font-size: 0.75rem;
+    padding: 6px 2px 9px;
+  }
+}
+
+/* —— Login modal (Surecoin dark + gold) —— */
+.sc-login-modal {
+  max-width: 420px;
+  margin: 1.25rem auto;
+}
+
+.sc-login-modal__content,
+.popover-login-modal.sc-login-modal .modal-content {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 193, 7, 0.08), transparent 55%),
+    linear-gradient(180deg, #1a1a1a 0%, var(--sc-panel) 40%, #0f0f0f 100%);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  color: var(--sc-text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.sc-login-modal__header,
+.popover-login-modal.sc-login-modal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 12px;
+  background: transparent;
+  border-bottom: 1px solid var(--sc-border);
+  box-shadow: none;
+}
+
+.sc-login-modal__header .btn-close {
+  filter: invert(1) grayscale(1) brightness(1.4);
+  opacity: 0.65;
+}
+
+.sc-login-modal__header .btn-close:hover {
+  opacity: 1;
+}
+
+.sc-login-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--sc-text);
+}
+
+.sc-login-modal__logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.sc-login-modal__body {
+  padding: 0 !important;
+}
+
+.sc-login-form {
+  padding: 18px 18px 22px;
+}
+
+.sc-login-session-alert {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  color: var(--sc-yellow);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.sc-login-field {
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 0;
+}
+
+.sc-login-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sc-muted);
+}
+
+.sc-login-input {
+  display: block;
+  width: 100%;
+  height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--sc-border);
+  background: var(--sc-panel-2);
+  color: var(--sc-text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sc-login-input::placeholder {
+  color: #6b6b6b;
+}
+
+.sc-login-input:focus {
+  border-color: var(--sc-yellow);
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.18);
+}
+
+.sc-login-input.is-invalid {
+  border-color: #e55353;
+  color: #ff8e8e;
+}
+
+.sc-login-password-wrap {
+  position: relative;
+}
+
+.sc-login-password-wrap .sc-login-input {
+  padding-right: 44px;
+}
+
+.sc-login-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--sc-muted);
+  cursor: pointer;
+  font-size: 1.15rem;
+}
+
+.sc-login-eye:hover {
+  color: var(--sc-yellow);
+}
+
+.sc-login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 14px;
+  font-size: 0.88rem;
+  color: var(--sc-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sc-login-remember input {
+  accent-color: var(--sc-yellow);
+}
+
+.sc-login-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.sc-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.sc-login-btn--primary {
+  background: var(--sc-yellow);
+  color: #141414;
+  border-color: var(--sc-yellow);
+}
+
+.sc-login-btn--primary:hover {
+  background: var(--sc-yellow-dim);
+  border-color: var(--sc-yellow-dim);
+  color: #141414;
+  opacity: 0.95;
+}
+
+.sc-login-btn--ghost {
+  background: transparent;
+  color: var(--sc-text);
+  border-color: var(--sc-border);
+}
+
+.sc-login-btn--ghost:hover {
+  border-color: var(--sc-yellow);
+  color: var(--sc-yellow);
+}
+
+.sc-login-btn--danger {
+  background: #a12626;
+  color: #fff;
+  border-color: #a12626;
+}
+
+.sc-login-link-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sc-yellow);
+  cursor: pointer;
+}
+
+.sc-login-link-btn:hover {
+  text-decoration: underline;
+}
+
+.sc-login-link-btn--muted {
+  margin-top: 10px;
+  color: var(--sc-muted);
+  font-weight: 600;
+}
+
+.sc-login-link-btn--muted:hover {
+  color: var(--sc-text);
+}
+
+.sc-login-link {
+  color: var(--sc-yellow);
+  font-weight: 600;
+}
+
+.sc-login-link--warn {
+  color: #ff8e8e;
+  text-decoration: underline;
+}
+
+.sc-login-alert-block {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.sc-login-already {
+  padding: 28px 20px 32px;
+  text-align: center;
+}
+
+.sc-login-already__title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--sc-text);
+}
+
+.sc-login-already__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.modal-backdrop.show {
+  background-color: rgba(0, 0, 0, 0.72);
 }

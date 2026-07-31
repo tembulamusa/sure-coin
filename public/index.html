@@ -146,31 +146,4 @@
   }
 </script>
 
-<script>
-  let timeout;
-  const inactivityTime = 60 * 60 * 1000; // 5 minutes
-
-  function resetTimer() {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      // Perform logout or redirect
-      let storedUser = window.localStorage.getItem("user");
-
-      if (storedUser) {
-        alert("Your Session Expired. Click ok to start a new session");
-        window.location.href = "/logout";
-      }
-    }, inactivityTime);
-  }
-
-  // Reset timer on user interaction
-  window.onload = resetTimer;
-  document.onmousemove = resetTimer;
-  document.onkeypress = resetTimer;
-  document.onscroll = resetTimer;
-  document.onclick = resetTimer;
-
-
-</script>
-
 </html>

@@ -1,112 +1,119 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { Context } from "../../../context/store";
-import { FaCheckCircle, FaMinus } from "react-icons/fa";
+import { FaCheck, FaCheckCircle } from "react-icons/fa";
 import { CgAdd, CgRemove } from "react-icons/cg";
-import { Switch } from "@mui/material";
+import { GiTwoCoins } from "react-icons/gi";
+import { MdOutlineGpsFixed } from "react-icons/md";
 import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
+import HeadsCoin from "../../../assets/surecoin/heads.png";
+import TailsCoin from "../../../assets/surecoin/tails.png";
+
+const DEFAULT_AUTO_ROUNDS = 10;
+const MAX_AUTO_ROUNDS = 99;
+
+const ScToggle = ({ checked, onChange, label }) => (
+    <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        className={`sc-toggle${checked ? " is-on" : ""}`}
+        onClick={onChange}
+    >
+        <span className="sc-toggle-thumb" />
+    </button>
+);
 
 const CoinStakeChoice = (props) => {
-    const {coinnumber, isspinning, nxtSession, prevSession, isOnline} = props;
+    const { coinnumber, isspinning, nxtSession } = props;
     const [amount, setAmount] = useState(5);
     const [state, dispatch] = useContext(Context);
     const [inputErrors, setInputErrors] = useState({});
-    const [defaultAmountChange, ] = useState(10);
-    const [minimumBetAmount, setMinimumAmount] = useState(5);
+    const [defaultAmountChange] = useState(10);
+    const [minimumBetAmount] = useState(5);
     const [pickedBtn, setPickedBtn] = useState(null);
-    const [autoBet, setAutoBet] =  useState(false);
-    const [autoBetsLeft, setAutoBetsLeft] = useState(1);
+    const [autoBet, setAutoBet] = useState(false);
+    const [autoBetsLeft, setAutoBetsLeft] = useState(DEFAULT_AUTO_ROUNDS);
     const [userPlaceBetOn, setUserPlaceBetOn] = useState(false);
-    const [autoPick, setAutoPick] = useState(false)
-
+    const [autoPick, setAutoPick] = useState(false);
 
     const setcanplayTheitems = () => {
-        let itemtoplay = 'canplayitems-' + coinnumber;
+        let itemtoplay = "canplayitems-" + coinnumber;
         if (!state?.[itemtoplay]) {
-            dispatch({type: "SET", key:itemtoplay, payload:true});
+            dispatch({ type: "SET", key: itemtoplay, payload: true });
         }
-    }
+    };
 
     const amountChanged = (e) => {
-        // set Controlls here eg it should be less than  equal to balance
-        // else show errors
         let value = parseInt(e.target.value);
         setAmount(value);
-    }
+    };
 
-    const unfocus = (e) => {
+    const unfocus = () => {
         if (amount < 5) {
-            setAmount(5)
+            setAmount(5);
         }
-    }
+    };
 
     useEffect(() => {
         const getDefaultUserAmount = getFromLocalStorage("userDefaultCoinAmount");
         if (getDefaultUserAmount) {
             setAmount(getDefaultUserAmount);
         } else {
-            setAmount(5)
+            setAmount(5);
         }
     }, []);
 
     const changeAmount = (changeType) => {
-
         if (changeType === "increase") {
-            let newAmount = defaultAmountChange + amount
-            setAmount(newAmount);
+            setAmount(defaultAmountChange + amount);
         } else if (changeType === "decrease") {
-            let newAmount = amount - defaultAmountChange
+            let newAmount = amount - defaultAmountChange;
             if (newAmount > minimumBetAmount) {
                 setAmount(newAmount);
             } else {
-                setAmount(minimumBetAmount)
+                setAmount(minimumBetAmount);
             }
         }
-    }
+    };
 
-    useEffect(() => {if( autoBetsLeft <= 0 ) { setAutoBetsLeft(0); setAutoBet(false) }}, [autoBetsLeft])
+    useEffect(() => {
+        if (autoBetsLeft <= 0 && autoBet) {
+            setAutoBetsLeft(0);
+            setAutoBet(false);
+        }
+    }, [autoBetsLeft, autoBet]);
+
     const coinsideAutopick = () => {
-        const choices = ["heads", "tails"]
+        const choices = ["heads", "tails"];
         const i = Math.floor(Math.random() * 2);
         setPickedBtn(choices[i]);
-    }
+    };
+
     useEffect(() => {
         if (isspinning == false) {
-            //Next, we check if it's on auto and etoc picks are ok
             let timeOutId;
-            // if(userPlaceBetOn) {
-                // setUserPlaceBetOn(false);
-                if (autoBet) {
-                    // check for user and login
-                    if(!state?.user) {
-                        if(!state?.showloginmodal) {
-                            dispatch({type:"SET", key:"showloginmodal", payload:true})
+            if (autoBet) {
+                if (autoBetsLeft > 0) {
+                    setUserPlaceBetOn(false);
+                    timeOutId = setTimeout(() => {
+                        if (!pickedBtn) {
+                            coinsideAutopick();
                         }
-                        return;
-                    }
-                    if(autoBetsLeft > 0){
-                        setUserPlaceBetOn(false);
-                        timeOutId = setTimeout(() => {
-                            if (!pickedBtn){coinsideAutopick()};
-                            setUserPlaceBetOn(true);
-                            setAutoBetsLeft((prev) => prev - 1)
-                        }, 1000);
-                    }
-                } else {
-                    // setUserPlaceBetOn(false);
-
+                        setUserPlaceBetOn(true);
+                        setAutoBetsLeft((prev) => prev - 1);
+                    }, 1000);
                 }
-            
+            }
+            return () => clearTimeout(timeOutId);
         } else {
-            if(!autoBet) {
+            if (!autoBet) {
                 setAutoPick(false);
             }
-            setPickedBtn(null)
+            setPickedBtn(null);
             setUserPlaceBetOn(false);
-
         }
-        
-    }, [isspinning])
+    }, [isspinning]);
 
     const pickClick = (pick) => {
         if (pick === "tails") {
@@ -114,157 +121,226 @@ const CoinStakeChoice = (props) => {
         } else if (pick === "heads") {
             setPickedBtn("heads");
         }
-
-    }
+    };
 
     useEffect(() => {
         if (amount) {
-            setLocalStorage("userDefaultCoinAmount", amount, 1000 * 60 * 60 * 2)
-            dispatch({type:"SET",
+            setLocalStorage("userDefaultCoinAmount", amount, 1000 * 60 * 60 * 2);
+            dispatch({
+                type: "SET",
                 key: "coinselections",
-                payload: state?.coinselections ? {...state?.coinselections, [coinnumber]:{pick: pickedBtn, amount: amount, userbeton:userPlaceBetOn}} : {[coinnumber]: {pick: pickedBtn, amount:amount, userbeton:userPlaceBetOn}}})
+                payload: state?.coinselections
+                    ? {
+                          ...state?.coinselections,
+                          [coinnumber]: {
+                              pick: pickedBtn,
+                              amount: amount,
+                              userbeton: userPlaceBetOn,
+                          },
+                      }
+                    : {
+                          [coinnumber]: {
+                              pick: pickedBtn,
+                              amount: amount,
+                              userbeton: userPlaceBetOn,
+                          },
+                      },
+            });
         }
-    }, [amount, pickedBtn, userPlaceBetOn])
+    }, [amount, pickedBtn, userPlaceBetOn]);
 
     const autoBetToggle = () => {
-        setAutoBet(!autoBet);
-    }
+        if (!autoBet) {
+            if (autoBetsLeft <= 0) {
+                setAutoBetsLeft(DEFAULT_AUTO_ROUNDS);
+            }
+            setAutoBet(true);
+        } else {
+            setAutoBet(false);
+        }
+    };
+
     const autoPickToggle = () => {
-        if(!autoPick) {
+        if (!autoPick) {
             coinsideAutopick();
         }
         setAutoPick(!autoPick);
-    }
+    };
+
+    const clampAutoRounds = (value) => {
+        if (Number.isNaN(value)) return DEFAULT_AUTO_ROUNDS;
+        return Math.min(MAX_AUTO_ROUNDS, Math.max(0, value));
+    };
 
     const userChangeAutopicks = (ev) => {
-        setAutoBetsLeft(parseInt(ev.target.value))
-    }
+        const parsed = parseInt(ev.target.value, 10);
+        setAutoBetsLeft(clampAutoRounds(Number.isNaN(parsed) ? 0 : parsed));
+    };
+
+    const unfocusAutoRounds = () => {
+        if (autoBet) {
+            // Mid-run edits set remaining rounds; 0 stops Auto Bet via the effect above.
+            if (Number.isNaN(Number(autoBetsLeft)) || autoBetsLeft < 0) {
+                setAutoBetsLeft(0);
+            }
+            return;
+        }
+        if (!autoBetsLeft || autoBetsLeft < 1) {
+            setAutoBetsLeft(DEFAULT_AUTO_ROUNDS);
+        }
+    };
 
     const pressBetButton = () => {
-        // other validations can have an on or no action at all
-        // all validations notwithstanding
-        if(!state?.user?.token) {
-            dispatch({type:"SET", key:"showloginmodal", payload: true})
+        if (pickedBtn) {
+            setUserPlaceBetOn(true);
         } else {
-            if (pickedBtn) {
-                setUserPlaceBetOn(true)
-            } else {
-                setInputErrors({...inputErrors, userPick: "unpicked button"})
-            }
+            setInputErrors({ ...inputErrors, userPick: "unpicked button" });
         }
-    }
+    };
 
-    useEffect(() => {if (state?.promptdepositrequest?.show) {setAutoBet(false)}}, [state?.promptdepositrequest])
-    
+    useEffect(() => {
+        if (state?.promptdepositrequest?.show) {
+            setAutoBet(false);
+        }
+    }, [state?.promptdepositrequest]);
+
+    const confirmed = nxtSession?.coinselections?.[coinnumber]?.userbeton;
+    const hasPick = nxtSession?.coinselections?.[coinnumber]?.pick;
+
     return (
-        <>
-            <div className="user-input-section" onClick={() => setcanplayTheitems()}>                
-                <div className="user-input-main flex">
-                    <div className="input-collector flex-col w-1/2 m-1">
-                        <div className="flex my-1">
-                            <label className="my-2 text-white opacity-80 w-1/2 !md:w-1/4 flex">Amount</label>
-                            <div className="sure-coin-amount-input-section flex w-1/2">
-                                <CgRemove
-                                    onClick={() => changeAmount("decrease") }
-                                    className="mt-1 text-3xl opacity-60 hover:opacity-100 cursor-pointer" />
+        <div className="sc-bet-panel" onClick={() => setcanplayTheitems()}>
+            <div className="sc-bet-panel-top">
+                <div className="sc-bet-manual">
+                    <div className="sc-bet-field">
+                        <label>Amount</label>
+                        <div className="sc-amount-stepper">
+                            <span className="sc-currency">KES</span>
+                            <div className="sc-amount-controls">
+                                <button
+                                    type="button"
+                                    className="sc-stepper-btn"
+                                    onClick={() => changeAmount("decrease")}
+                                    aria-label="Decrease amount"
+                                >
+                                    <CgRemove aria-hidden="true" />
+                                </button>
                                 <input
-                                    onChange={(e) => amountChanged(e)} 
+                                    onChange={(e) => amountChanged(e)}
                                     type="number"
                                     value={amount}
                                     min={minimumBetAmount}
-                                    onBlur={(e) => unfocus(e)}
-                                    className="border-[transparent] w-[80%] user-amount-input px-2 bg-transparent text-white"/>
-
-                                <CgAdd className="mt-1 text-3xl opacity-60 hover:opacity-100 cursor-pointer" onClick={() => changeAmount("increase") }/>
-                            </div>
-                        </div>
-                        <div className="win-info flex">
-                            <label className="my-2 text-white opacity-80 w-1/2 md:w-1/4 ">Odds</label>
-                            <div className="text-right font-[700] w-1/2 text-align-right"><small>x</small> 2</div>
-                        </div>
-                        <div className="win-info flex my-2">
-                            <label className=" text-white opacity-80 w-1/2 !md:w-1/4 flex win-amount">Payout</label>
-                            <div className="text-right font-[700] w-1/2 text-align-right float-end">KES. {amount *2 }.00</div>
-                        </div>
-                    </div>
-                    <div className="flex-col w-1/2 autoBet-settings">
-                        <div className="px-3 text-center">
-                            <div className="flex">
-                                <div className="flex-col w-1/2">
-                                    <div className="">
-                                        Auto Pick
-                                    </div>
-                                    <Switch
-                                            checked={autoPick}
-                                            onChange={() => autoPickToggle()}
-                                        />
-                                </div>
-                                <div className="flex-col w-1/2">
-                                    <div>Auto Bet</div>
-                                        <Switch
-                                            checked={autoBet}
-                                            onChange={() => autoBetToggle()}
-                                        />
-                                        {autoBet && 
-                                            <div className="autopicks-left sure-coin-amount-input-section mx-auto flex !py-0 !px-1 !bg-[rgba(0,0,0,0.2)]">
-                                                <CgRemove
-                                                    onClick={() => setAutoBetsLeft(autoBetsLeft - 1) }
-                                                    className="mt-1 text-4xl opacity-60 hover:opacity-100 cursor-pointer" />
-                                                <input
-                                                    name=""
-                                                    type="number"
-                                                    className="bg-[transparent] !w-[40px] px-2"
-                                                    value={autoBetsLeft}
-                                                    onChange={(ev) => userChangeAutopicks(ev)}
-                                                    max={50}
-                                                    min={1}
-
-                                                />
-                                                <CgAdd
-                                                    className="mt-1 text-4xl opacity-60 hover:opacity-100 cursor-pointer"
-                                                    onClick={() => setAutoBetsLeft(autoBetsLeft + 1) }/>
-                                            </div>
-                                        }
-
-                                        {(autoBet && !nxtSession?.coinselections?.[coinnumber]?.pick) && <div className="autopick-hint">select auto pick</div>}
-
-                                </div>
-                                
+                                    onBlur={unfocus}
+                                    className="sc-amount-input"
+                                    aria-label="Bet amount"
+                                />
+                                <button
+                                    type="button"
+                                    className="sc-stepper-btn"
+                                    onClick={() => changeAmount("increase")}
+                                    aria-label="Increase amount"
+                                >
+                                    <CgAdd aria-hidden="true" />
+                                </button>
                             </div>
                         </div>
                     </div>
-                    
+                    <div className="sc-bet-field">
+                        <label>Odds</label>
+                        <div className="sc-odds-value">
+                            <span className="sc-odds-x">x</span>
+                            <strong>2.00</strong>
+                        </div>
+                    </div>
+                    <div className="sc-bet-field">
+                        <label>Payout</label>
+                        <div className="sc-payout-value">
+                            KES. {(amount * 2).toFixed(2)}
+                        </div>
+                    </div>
                 </div>
-                <div className="user-selection my-2 border-t border-gray-900 pt-3 pb-2">
-                    <div className={`input-place-bet-btn text-center w-full font-bol row`}>
-                        <div className="col-md-6">
-                            <div className={`row ${inputErrors?.userPick && "pick-errors"}`}>
-                                <div className="col-6 ">
-                                    <button
-                                        className={`relative mb-2 pickBtn !w-full head uppercase ${pickedBtn === "heads" ? "selected-btn selected-head" : ""}`}
-                                        onClick={() => pickClick("heads")}
-                                        >
-                                            Heads {nxtSession?.coinselections?.[coinnumber]?.pick == "heads" && <FaCheckCircle className="user-picked-btn"/>}
-                                    </button>
-                                </div>
-                                <div className="col-6 !pr-0">
-                                    <button
-                                        className={`relative pickBtn !w-full tail uppercase ${pickedBtn === "tails" ? "selected-btn selected-tail" : ""}`} 
-                                        onClick={() => pickClick("tails")}
-                                        >
-                                        Tails {nxtSession?.coinselections?.[coinnumber]?.pick == "tails" && <FaCheckCircle className="user-picked-btn"/>}
-                                    </button>
-                                </div>
+
+                <div className="sc-bet-auto">
+                    <div className="sc-auto-card sc-auto-card--pick">
+                        <div className="sc-auto-head">
+                            <MdOutlineGpsFixed className="sc-auto-icon" />
+                            <span className="sc-auto-label">Auto Pick</span>
+                        </div>
+                        <div className="sc-auto-controls">
+                            <ScToggle
+                                checked={autoPick}
+                                onChange={autoPickToggle}
+                                label="Auto Pick"
+                            />
+                            <div className={`sc-auto-rounds${autoBet ? " is-counting" : ""}`}>
+                                <input
+                                    type="number"
+                                    value={autoBetsLeft}
+                                    onChange={userChangeAutopicks}
+                                    onBlur={unfocusAutoRounds}
+                                    max={MAX_AUTO_ROUNDS}
+                                    min={0}
+                                    aria-label="Auto rounds"
+                                    title={
+                                        autoBet
+                                            ? "Rounds left (editable)"
+                                            : "Number of auto rounds"
+                                    }
+                                />
                             </div>
                         </div>
-                        <div className="col-md-6 !pr-0">
-                            <button disabled={!nxtSession?.coinselections?.[coinnumber]?.pick || nxtSession?.coinselections?.[coinnumber]?.userbeton} className={`${!nxtSession?.coinselections?.[coinnumber]?.pick && "no-picked-disabled"} w-full md:w-80 btn btn-place-surecoin-bet md:mb-0 mb-2 ${nxtSession?.coinselections?.[coinnumber]?.userbeton && "betplaced"}`} onClick={() => pressBetButton()}>{nxtSession?.coinselections?.[coinnumber]?.userbeton ? "Confirmed" : !nxtSession?.coinselections?.[coinnumber]?.pick ? "Pick Heads or Tails" : "Confirm Bet"}</button>
+                    </div>
+                    <div className="sc-auto-card sc-auto-card--bet">
+                        <div className="sc-auto-head">
+                            <GiTwoCoins className="sc-auto-icon" />
+                            <span className="sc-auto-label">Auto Bet</span>
+                        </div>
+                        <div className="sc-auto-controls">
+                            <ScToggle
+                                checked={autoBet}
+                                onChange={autoBetToggle}
+                                label="Auto Bet"
+                            />
+                            {autoBet && !hasPick && !autoPick && (
+                                <div className="autopick-hint">select auto pick</div>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
-        </>
-    )
-}
+
+            <div className={`sc-bet-actions ${inputErrors?.userPick ? "pick-errors" : ""}`}>
+                <button
+                    type="button"
+                    className={`sc-side-btn ${pickedBtn === "heads" ? "selected" : ""}`}
+                    onClick={() => pickClick("heads")}
+                >
+                    <img src={HeadsCoin} alt="" className="sc-side-coin" />
+                    HEADS
+                    {hasPick === "heads" && <FaCheck className="sc-picked-check" />}
+                </button>
+                <button
+                    type="button"
+                    className={`sc-side-btn ${pickedBtn === "tails" ? "selected" : ""}`}
+                    onClick={() => pickClick("tails")}
+                >
+                    <img src={TailsCoin} alt="" className="sc-side-coin" />
+                    TAILS
+                    {hasPick === "tails" && <FaCheck className="sc-picked-check" />}
+                </button>
+                <button
+                    type="button"
+                    disabled={!hasPick || confirmed}
+                    className={`sc-confirm-btn ${!hasPick ? "disabled" : ""} ${
+                        confirmed ? "confirmed" : ""
+                    }`}
+                    onClick={() => pressBetButton()}
+                >
+                    <FaCheckCircle />
+                    {confirmed ? "CONFIRMED" : "CONFIRM PICK"}
+                </button>
+            </div>
+        </div>
+    );
+};
 
 export default React.memo(CoinStakeChoice);

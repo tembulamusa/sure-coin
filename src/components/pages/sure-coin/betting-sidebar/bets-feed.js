@@ -61,6 +61,9 @@ export const createBetEntry = ({
     win,
     settled,
     won: settled ? won : false,
+    // Top-tab ranking helpers (period filter + Rounds metric)
+    at: Date.now(),
+    rounds: (seed % 25) + 1,
   };
 };
 

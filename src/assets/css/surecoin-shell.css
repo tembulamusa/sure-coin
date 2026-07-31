@@ -286,6 +286,46 @@ body,
   background: var(--sc-yellow);
 }
 
+/* Top tab: Day / Month / Year above X / Win / Rounds */
+.sc-top-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
+  flex-shrink: 0;
+}
+
+.sc-top-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sc-top-filter-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #8e8e8e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sc-top-filter-btn:hover {
+  color: #ddd;
+}
+
+.sc-top-filter-btn.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .sc-bets-panel-host,
 .sc-bets-panel {
   display: flex;

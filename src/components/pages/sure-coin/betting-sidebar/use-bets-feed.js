@@ -99,24 +99,39 @@ const useBetsFeed = ({ isSpinning, roundStats, lastOutcome }) => {
     });
     seedRef.current += 22;
 
+    const MS_DAY = 24 * 60 * 60 * 1000;
+    const now = Date.now();
     const historicTop = Array.from({ length: 16 }, (_, idx) => {
       const seed = seedRef.current + idx;
       const amount = randomBetAmount() * (1 + Math.floor(Math.random() * 3));
-      return createBetEntry({
+      const entry = createBetEntry({
         id: `top-${idx}`,
         seed,
         amount,
         settled: true,
         won: true,
       });
+      // Spread ages so Day / Month / Year filters change the list
+      const ageMs =
+        idx < 5
+          ? Math.random() * MS_DAY
+          : idx < 11
+            ? MS_DAY + Math.random() * (29 * MS_DAY)
+            : 30 * MS_DAY + Math.random() * (335 * MS_DAY);
+      return { ...entry, at: now - ageMs };
     });
+
+    const previousWithAge = previousSeed.map((bet, idx) => ({
+      ...bet,
+      at: now - Math.random() * MS_DAY - idx * 60_000,
+    }));
 
     seedRef.current += 16;
     betIdRef.current = 60;
 
     setAllBets(live);
-    setPreviousBets(previousSeed);
-    setTopBets(sortTopWins([...historicTop, ...previousSeed]).slice(0, 50));
+    setPreviousBets(previousWithAge);
+    setTopBets(sortTopWins([...historicTop, ...previousWithAge]).slice(0, 50));
     setExpectedBets(220 + Math.floor(Math.random() * 80));
     setLoading(false);
   }, []);

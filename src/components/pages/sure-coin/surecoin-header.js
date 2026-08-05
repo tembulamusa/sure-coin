@@ -14,8 +14,21 @@ const SurecoinHeader = ({
   networkBackOnCount,
   isOnline,
 }) => {
-  const [state] = useContext(Context);
+  const [state, dispatch] = useContext(Context);
   const balance = state?.user?.balance;
+  const loggedIn = Boolean(state?.user?.token);
+
+  const openWallet = (mode) => {
+    if (!loggedIn) {
+      dispatch({ type: "SET", key: "showloginmodal", payload: true });
+      return;
+    }
+    dispatch({
+      type: "SET",
+      key: "promptdepositrequest",
+      payload: { show: true, mode },
+    });
+  };
 
   return (
     <header className="sc-header">
@@ -52,6 +65,12 @@ const SurecoinHeader = ({
             KES. {balance != null ? formatKes(balance) : "0.00"}
           </span>
         </div>
+        <button type="button" className="sc-sound-btn" onClick={() => openWallet("deposit")}>
+          +
+        </button>
+        <button type="button" className="sc-sound-btn" onClick={() => openWallet("withdraw")}>
+          −
+        </button>
         <button
           type="button"
           className="sc-sound-btn"

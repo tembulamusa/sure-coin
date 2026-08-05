@@ -10,7 +10,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Notify from '../utils/Notify';
 import { Link } from 'react-router-dom';
 import { FaRegEye, FaRegEyeSlash  } from "react-icons/fa";
-import { getFromLocalStorage } from '../utils/local-storage';
+import { getFromLocalStorage, setLocalStorage } from '../utils/local-storage';
 
 const Signup = (props) => {
     const [isLoading, setIsLoading] = useState(false)
@@ -31,29 +31,36 @@ const Signup = (props) => {
     }
 
     const handleSubmit = values => {
-        let endpoint = '/v2/auth/signup';
         setIsLoading(true);
-        let data = {
+        const data = {
             msisdn: values.msisdn,
             password: values.password,
-            promo_code: values.promo_code,
-            app_name: app,
+            display_name: values.display_name || undefined,
         };
 
-        makeRequest({url: endpoint, method: 'POST', data: data, api_version:2}).then(([status, response]) => {
-            setMessage(response?.message);
-            dispatch({type: "SET", key: "regmsisdn", payload: values?.msisdn})
-            if([200, 201, 204].includes(status)){
-                Notify({status: 200, message: "Registration successful. Please Verify the code sent to your phone"})
-                setTimeout(() => {
-                }, 3000);
-                navigate("/verify-account");
+        makeRequest({
+            url: "auth/signup",
+            method: "POST",
+            data,
+            api_version: "sureCoinPublic",
+        }).then(([status, response]) => {
+            if ([200, 201].includes(status) && response?.status === 200 && response?.data?.token) {
+                setLocalStorage("user", response.data);
+                dispatch({ type: "SET", key: "user", payload: response.data });
+                Notify({ status: 200, message: "Registration successful. Welcome!" });
+                navigate("/game");
             } else {
-                Notify({status: 400, message: "Error Making registration"})
-                setIsLoading(false);
+                Notify({
+                    status: 400,
+                    message:
+                        response?.error?.description ||
+                        response?.result ||
+                        response?.message ||
+                        "Registration failed",
+                });
             }
-            
-        })
+            setIsLoading(false);
+        });
     }
 
     const validate = values => {

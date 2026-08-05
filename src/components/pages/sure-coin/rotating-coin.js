@@ -20,7 +20,6 @@ const RotatingCoin = (props) => {
         isspinning,
         coinnumber,
         usermuted,
-        prepToStart,
         userSoundSet,
         coinSettled,
         onOutcomeChange,
@@ -135,10 +134,10 @@ const RotatingCoin = (props) => {
             return;
         }
         setSpinSoundActive(isspinning, usermuted);
-    }, [isspinning, usermuted, userSoundSet, roundState.phase, prepToStart, isSettling, rotatingSpeedLevel, roundState.flipProgress]);
+    }, [isspinning, usermuted, userSoundSet, roundState.phase, isSettling, rotatingSpeedLevel, roundState.flipProgress]);
 
     const faceClass =
-        !isspinning && !isSettling && !prepToStart && coinOnDisplay
+        !isspinning && !isSettling && coinOnDisplay
             ? `face-${coinOnDisplay}`
             : "";
     const settleClass =
@@ -152,7 +151,7 @@ const RotatingCoin = (props) => {
     return (
         <div className="relative sc-coin-stage">
             <div
-                className={`sc-coin-ground-shadow${isspinning ? " is-spinning" : ""}${!isspinning && prepToStart && !isSettling ? " is-prep" : ""}${isSettling ? " is-settling" : ""}`}
+                className={`sc-coin-ground-shadow${isspinning ? " is-spinning" : ""}${isSettling ? " is-settling" : ""}`}
                 aria-hidden="true"
             />
             <div className="notify-win-container">
@@ -182,7 +181,7 @@ const RotatingCoin = (props) => {
                 </div>
             </div>
             <div
-                className={`rotating-img sc-coin-mesh ${coinSettled ? "coin-settled" : ""} ${isspinning ? "is-spinning" : ""} ${!isspinning && prepToStart && !isSettling ? "prep-to-start" : ""} ${settleClass} ${faceClass} rotating-speed-level-${rotatingSpeedLevel}`}
+                className={`rotating-img sc-coin-mesh ${coinSettled ? "coin-settled" : ""} ${isspinning ? "is-spinning" : ""} ${settleClass} ${faceClass} rotating-speed-level-${rotatingSpeedLevel}`}
                 onAnimationEnd={handleCoinAnimationEnd}
             >
                 <img

@@ -221,6 +221,38 @@ const useSurecoinSocket = () => {
         }
         lastTickMsRef.current = now;
       }
+      // #region agent log
+      if (
+        eventName === "round:waiting" ||
+        eventName === "round:tick" ||
+        eventName === "round:flip_start" ||
+        eventName === "round:flip_tick" ||
+        eventName === "round:result"
+      ) {
+        fetch("http://127.0.0.1:7274/ingest/6e270618-3295-4780-92b9-7cd234beb521", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "658538",
+          },
+          body: JSON.stringify({
+            sessionId: "658538",
+            runId: "timing-fix",
+            hypothesisId: "H1",
+            location: "use-surecoin-socket.js:onRoundEvent",
+            message: "round event",
+            data: {
+              eventName,
+              phase: payload?.phase,
+              seconds: payload?.seconds_remaining,
+              flipSeconds: payload?.flip_seconds,
+              willSpin: payload?.phase === "FLIPPING" || eventName === "round:flip_start",
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+      }
+      // #endregion
       handleRoundPayload(eventName, payload);
     };
 

@@ -22,7 +22,6 @@ const SureCoinIndex = () => {
     const [isOnline, setIsOnline] = useState(true);
     const [networkBackOnCount, setNetworkBackOnCount] = useState(0);
     const [isDocumentVisible, setIsDocumentVisible] = useState(!document.hidden);
-    const [prepToStart, setPrepToStart] = useState(false);
   const isLocalSim = process.env.REACT_APP_LOCAL_SIM === "true";
   const [userSoundSet, setUserSoundSet] = useState(
     () => isLocalSim || isSurecoinAudioUnlocked()
@@ -53,17 +52,10 @@ const SureCoinIndex = () => {
     useEffect(() => {
         if (roundState.phase === "WAITING") {
             setCoinSettled(true);
-            if (roundState.secondsRemaining <= 2) {
-                setPrepToStart(true);
-                setCoinSettled(false);
-            } else {
-                setPrepToStart(false);
-            }
         } else if (roundState.phase === "FLIPPING") {
-            setPrepToStart(false);
             setCoinSettled(false);
         }
-    }, [roundState.phase, roundState.secondsRemaining]);
+    }, [roundState.phase]);
 
     useEffect(() => {
         if (state?.coinsAlertMsg) {
@@ -173,12 +165,9 @@ const SureCoinIndex = () => {
                                 userMuted={userMuted}
                                 userSoundSet={userSoundSet}
                                 isOnline={isOnline}
-                                setPrepToStart={setPrepToStart}
-                                prepToStart={prepToStart}
                                 coinSettled={coinSettled}
                                 isDocumentVisible={isDocumentVisible}
                                 roundStats={roundStats}
-                                setCoinSettled={setCoinSettled}
                                 lastOutcome={lastOutcome}
                                 onOutcomeChange={handleOutcomeChange}
                             />

@@ -11,12 +11,9 @@ const GameDisplay = ({
   userMuted,
   userSoundSet,
   isOnline,
-  setPrepToStart,
-  prepToStart,
   coinSettled,
   isDocumentVisible,
   roundStats,
-  setCoinSettled,
   lastOutcome,
   onOutcomeChange,
 }) => {
@@ -38,7 +35,6 @@ const GameDisplay = ({
                   isspinning={isSpinning}
                   usermuted={userMuted}
                   userSoundSet={userSoundSet}
-                  prepToStart={prepToStart}
                   coinSettled={coinSettled}
                   onOutcomeChange={onOutcomeChange}
                 />
@@ -60,10 +56,7 @@ const GameDisplay = ({
         </div>
 
         {isWaiting && isOnline && isDocumentVisible ? (
-          <TakeBetsTimer
-            setPrepToStart={setPrepToStart}
-            setCoinSettled={setCoinSettled}
-          />
+          <TakeBetsTimer />
         ) : (
           <div className="bets-timer-empty-holder" aria-hidden="true" />
         )}

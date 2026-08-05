@@ -16,6 +16,9 @@ const BettingSidebar = ({ isSpinning, roundStats, lastOutcome }) => {
     resetVisible,
     hasMore,
     loading,
+    applyTopFilters,
+    topPeriod,
+    topMetric,
   } = useBetsFeed({
     isSpinning,
     roundStats,
@@ -49,7 +52,15 @@ const BettingSidebar = ({ isSpinning, roundStats, lastOutcome }) => {
             />
           )}
           {activeTab === "top" && (
-            <TopBetsPanel bets={rows} summary={summaries.top} loading={loading} />
+            <TopBetsPanel
+              bets={rows}
+              summary={summaries.top}
+              loading={loading}
+              period={topPeriod}
+              metric={topMetric}
+              onPeriodChange={(p) => applyTopFilters(p, topMetric)}
+              onMetricChange={(m) => applyTopFilters(topPeriod, m)}
+            />
           )}
         </div>
 

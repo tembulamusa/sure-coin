@@ -8,6 +8,8 @@ import { formatKes } from "./betting-sidebar/bets-feed";
 const SurecoinHeader = ({
   userMuted,
   setUserMuted,
+  onEnableSound,
+  setUserSoundSet,
   coinsAlertMsg,
   networkBackOnCount,
   isOnline,
@@ -47,14 +49,22 @@ const SurecoinHeader = ({
         <div className="sc-balance">
           <span className="sc-balance-label">Balance</span>
           <span className="sc-balance-value">
-            KES. {balance != null ? formatKes(balance) : "12,450.00"}
+            KES. {balance != null ? formatKes(balance) : "0.00"}
           </span>
         </div>
         <button
           type="button"
           className="sc-sound-btn"
           aria-label={userMuted ? "Unmute" : "Mute"}
-          onClick={() => setUserMuted(!userMuted)}
+          onClick={async () => {
+            if (userMuted) {
+              await onEnableSound?.();
+              setUserSoundSet?.(true);
+              setUserMuted(false);
+            } else {
+              setUserMuted(true);
+            }
+          }}
         >
           {userMuted ? <BiSolidVolumeMute /> : <FaVolumeHigh />}
         </button>

@@ -716,11 +716,11 @@ body,
 }
 
 .sc-coin-ground-shadow.is-prep {
-  animation: scCoinShadowPrep 1.8s linear infinite;
+  animation: scCoinShadowPrep 0.35s linear infinite;
 }
 
 .sc-coin-ground-shadow.is-spinning {
-  animation: scCoinShadowSpin 0.07s linear infinite;
+  animation: scCoinShadowSpin 0.018s linear infinite;
 }
 
 .sc-coin-ground-shadow.is-settling {
@@ -772,11 +772,15 @@ body,
 }
 
 .sc-coin-mesh.is-spinning {
-  animation: coinFlipSpin 0.07s linear infinite;
+  animation: coinFlipSpin 0.02s linear infinite !important;
 }
 
 .sc-coin-mesh.prep-to-start {
-  animation: coinPrepSpin 1.8s linear infinite;
+  animation: coinPrepSpin 0.35s linear infinite;
+}
+
+.sc-coin-mesh.is-spinning.prep-to-start {
+  animation: coinFlipSpin 0.02s linear infinite !important;
 }
 
 .sc-coin-mesh.is-settling.settle-heads {

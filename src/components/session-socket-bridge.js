@@ -1,8 +1,10 @@
 import useSessionSocket from "../hooks/use-session-socket";
+import useSurecoinSocket from "../hooks/use-surecoin-socket";
 
-/** Mounts socket session listeners inside the game layout (needs Context). */
+/** Mounts platform + SureCoin game socket listeners inside the game layout. */
 const SessionSocketBridge = () => {
   useSessionSocket();
+  useSurecoinSocket();
   return null;
 };
 

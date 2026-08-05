@@ -14,6 +14,9 @@ import './assets/css/embed-host.css';
 import './index.css';
 import 'react-toastify/dist/ReactToastify.css'
 import Store from './context/store';
+import bootstrapLocalSim from './bootstrap/local-sim';
+
+bootstrapLocalSim();
 import Signup from './components/pages/signup';
 import ResetPassword from './components/pages/auth/reset-password';
 import VerifyAccount from './components/pages/auth/verify-account';

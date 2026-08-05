@@ -1,247 +1,125 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  createBetEntry,
-  randomBetAmount,
-  settleBets,
-  sortTopWins,
-  sumWins,
-} from "./bets-feed";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSureCoinRound } from "../../../../context/surecoin-round";
+import makeRequest from "../../../utils/fetch-request";
+import { sortTopWins, sumWins } from "./bets-feed";
 
-const SETTLE_HOLD_MS = 1800;
+const mapBetRow = (bet, index = 0) => ({
+  id: bet.id ?? bet.bet_id ?? `bet-${index}`,
+  player: bet.player ?? bet.display_name ?? "Player***",
+  bet: Number(bet.bet ?? bet.stake ?? 0),
+  choice: String(bet.choice ?? bet.coin_side ?? "heads").toLowerCase(),
+  multiplier: bet.multiplier != null ? Number(bet.multiplier) : 2,
+  win: bet.win != null ? Number(bet.win) : null,
+  settled: Boolean(bet.settled),
+  won: Boolean(bet.won),
+  at: bet.at ?? Date.now(),
+  rounds: bet.rounds ?? 1,
+  avatarColor:
+    bet.avatarColor ??
+    bet.avatar_color ??
+    `#${((index * 9973) % 0xffffff).toString(16).padStart(6, "0")}`,
+});
 
-/**
- * Aviator-style bet feed:
- * - All Bets: live round bets (grow while open; win stays empty until outcome)
- * - Settle when the coin result lands (spin end), not while the round is open
- * - Previous: last completed round
- * - Top: highest wins across recent rounds
- */
 const useBetsFeed = ({ isSpinning, roundStats, lastOutcome }) => {
-  const [allBets, setAllBets] = useState([]);
-  const [previousBets, setPreviousBets] = useState([]);
-  const [topBets, setTopBets] = useState([]);
+  const { state: roundState, dispatch: roundDispatch } = useSureCoinRound();
   const [visibleCount, setVisibleCount] = useState(12);
-  const [expectedBets, setExpectedBets] = useState(262);
   const [loading, setLoading] = useState(true);
-  const [revealHold, setRevealHold] = useState(false);
-  const betIdRef = useRef(1);
-  const seedRef = useRef(17);
-  const allBetsRef = useRef([]);
-  const prevSpinning = useRef(false);
-  const seeded = useRef(false);
-  const outcomeRef = useRef(lastOutcome);
-  const resetTimerRef = useRef(null);
-  const settleDelayRef = useRef(null);
+  const [topPeriod, setTopPeriod] = useState("day");
+  const [topMetric, setTopMetric] = useState("win");
+  const [previousBets, setPreviousBets] = useState([]);
 
-  useEffect(() => {
-    allBetsRef.current = allBets;
-  }, [allBets]);
-
-  useEffect(() => {
-    outcomeRef.current = lastOutcome;
-  }, [lastOutcome]);
-
-  useEffect(
-    () => () => {
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-      if (settleDelayRef.current) clearTimeout(settleDelayRef.current);
-    },
-    []
+  const allBets = useMemo(
+    () => roundState.liveBets.map((bet, idx) => mapBetRow(bet, idx)),
+    [roundState.liveBets]
   );
 
-  const appendLiveBets = useCallback((count = 1) => {
-    setAllBets((prev) => {
-      const next = [...prev];
-      for (let i = 0; i < count; i += 1) {
-        const seed = seedRef.current;
-        seedRef.current += 1;
-        next.unshift(
-          createBetEntry({
-            id: `live-${betIdRef.current}`,
-            seed,
-            amount: randomBetAmount(),
-            settled: false,
-          })
-        );
-        betIdRef.current += 1;
-      }
-      return next.slice(0, 320);
+  const topBets = useMemo(() => {
+    const leaderboard = roundState.leaderboard.map((bet, idx) => mapBetRow(bet, idx));
+    return sortTopWins(leaderboard.length ? leaderboard : previousBets);
+  }, [roundState.leaderboard, previousBets]);
+
+  const fetchPreviousBets = useCallback(async () => {
+    const [status, result] = await makeRequest({
+      url: "rounds/previous/bets?limit=50",
+      method: "GET",
+      api_version: "sureCoinPublic",
     });
+    if (status === 200 && Array.isArray(result?.bets)) {
+      setPreviousBets(result.bets.map((bet, idx) => mapBetRow(bet, idx)));
+    }
   }, []);
 
-  // Seed All / Previous / Top so every tab has content on first paint
-  useEffect(() => {
-    if (seeded.current) return;
-    seeded.current = true;
-
-    const live = Array.from({ length: 18 }, (_, idx) => {
-      const seed = seedRef.current + idx;
-      return createBetEntry({
-        id: `seed-${idx}`,
-        seed,
-        amount: randomBetAmount(),
-        settled: false,
-      });
+  const fetchLeaderboard = useCallback(async (period, metric) => {
+    const [status, result] = await makeRequest({
+      url: `leaderboard?period=${period}&metric=${metric}&limit=20`,
+      method: "GET",
+      api_version: "sureCoinPublic",
     });
-    seedRef.current += 18;
-
-    const previousSeed = Array.from({ length: 22 }, (_, idx) => {
-      const seed = seedRef.current + idx;
-      const amount = randomBetAmount();
-      const won = Math.random() < 0.48;
-      return createBetEntry({
-        id: `prev-${idx}`,
-        seed,
-        amount,
-        settled: true,
-        won,
-      });
-    });
-    seedRef.current += 22;
-
-    const MS_DAY = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const historicTop = Array.from({ length: 16 }, (_, idx) => {
-      const seed = seedRef.current + idx;
-      const amount = randomBetAmount() * (1 + Math.floor(Math.random() * 3));
-      const entry = createBetEntry({
-        id: `top-${idx}`,
-        seed,
-        amount,
-        settled: true,
-        won: true,
-      });
-      // Spread ages so Day / Month / Year filters change the list
-      const ageMs =
-        idx < 5
-          ? Math.random() * MS_DAY
-          : idx < 11
-            ? MS_DAY + Math.random() * (29 * MS_DAY)
-            : 30 * MS_DAY + Math.random() * (335 * MS_DAY);
-      return { ...entry, at: now - ageMs };
-    });
-
-    const previousWithAge = previousSeed.map((bet, idx) => ({
-      ...bet,
-      at: now - Math.random() * MS_DAY - idx * 60_000,
-    }));
-
-    seedRef.current += 16;
-    betIdRef.current = 60;
-
-    setAllBets(live);
-    setPreviousBets(previousWithAge);
-    setTopBets(sortTopWins([...historicTop, ...previousWithAge]).slice(0, 50));
-    setExpectedBets(220 + Math.floor(Math.random() * 80));
-    setLoading(false);
+    if (status === 200 && Array.isArray(result?.entries)) {
+      return result.entries.map((bet, idx) => mapBetRow(bet, idx));
+    }
+    return [];
   }, []);
 
-  // Grow live bets while round is open (not spinning, not holding settled reveal)
   useEffect(() => {
-    if (isSpinning || loading || revealHold) return undefined;
-
-    const tick = () => {
-      const burst = Math.random() > 0.7 ? 2 : 1;
-      appendLiveBets(burst);
-    };
-
-    const id = setInterval(tick, 900 + Math.floor(Math.random() * 700));
-    return () => clearInterval(id);
-  }, [isSpinning, appendLiveBets, loading, revealHold]);
+    Promise.all([fetchPreviousBets()]).finally(() => setLoading(false));
+  }, [fetchPreviousBets]);
 
   useEffect(() => {
-    if (roundStats?.bets) {
-      const target = Math.max(Number(roundStats.bets), allBetsRef.current.length + 5);
-      setExpectedBets(target);
+    if (roundState.phase === "RESULT" && roundState.previousRoundBets?.length) {
+      setPreviousBets(roundState.previousRoundBets.map((bet, idx) => mapBetRow(bet, idx)));
     }
-  }, [roundStats?.bets]);
+  }, [roundState.phase, roundState.previousRoundBets]);
 
-  // Spin start: freeze list only (win stays —). Spin end: settle once outcome can land.
   useEffect(() => {
-    if (isSpinning && !prevSpinning.current) {
-      if (resetTimerRef.current) {
-        clearTimeout(resetTimerRef.current);
-        resetTimerRef.current = null;
-      }
-      if (settleDelayRef.current) {
-        clearTimeout(settleDelayRef.current);
-        settleDelayRef.current = null;
-      }
-      setRevealHold(false);
-      setVisibleCount(12);
+    if (roundState.phase === "RESULT" && lastOutcome) {
+      fetchPreviousBets();
     }
-
-    if (!isSpinning && prevSpinning.current) {
-      // Hold growth; wait briefly so rotating-coin can push lastOutcome
-      setRevealHold(true);
-      setVisibleCount(12);
-
-      if (settleDelayRef.current) clearTimeout(settleDelayRef.current);
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-
-      settleDelayRef.current = setTimeout(() => {
-        settleDelayRef.current = null;
-        const settled = settleBets(allBetsRef.current, outcomeRef.current);
-        setAllBets(settled);
-        setPreviousBets(settled);
-        setTopBets((prev) => sortTopWins([...settled, ...prev]).slice(0, 50));
-
-        resetTimerRef.current = setTimeout(() => {
-          setAllBets([]);
-          setExpectedBets(220 + Math.floor(Math.random() * 80));
-          setVisibleCount(12);
-          setRevealHold(false);
-          appendLiveBets(8);
-          resetTimerRef.current = null;
-        }, SETTLE_HOLD_MS);
-      }, 150);
-    }
-
-    prevSpinning.current = isSpinning;
-  }, [isSpinning, appendLiveBets]);
+  }, [roundState.phase, lastOutcome, fetchPreviousBets]);
 
   const buildSummary = useCallback((bets, expectedOverride) => {
     const placed = bets.length;
-    const expected = expectedOverride ?? Math.max(placed, 1);
+    const expected = expectedOverride ?? Math.max(roundStats?.bets ?? placed, placed, 1);
     return {
       placed,
       expected,
       totalWin: sumWins(bets.filter((b) => b.settled && Number(b.win) > 0)),
       avatars: bets.slice(0, 5),
     };
-  }, []);
+  }, [roundStats?.bets]);
 
   const summaries = useMemo(
     () => ({
-      all: {
-        placed: allBets.length,
-        expected: Math.max(expectedBets, allBets.length),
-        // Total win only after settle — open / spinning rounds stay at 0.00
-        totalWin: sumWins(allBets.filter((b) => b.settled && Number(b.win) > 0)),
-        avatars: allBets.slice(0, 5),
-      },
+      all: buildSummary(allBets, roundStats?.bets),
       previous: buildSummary(previousBets, previousBets.length || 1),
       top: buildSummary(topBets, topBets.length || 1),
     }),
-    [allBets, previousBets, topBets, expectedBets, buildSummary]
+    [allBets, previousBets, topBets, buildSummary, roundStats?.bets]
   );
 
   const getTabBets = useCallback(
     (tab) => {
       if (tab === "previous") return previousBets;
-      if (tab === "top") return topBets.length ? topBets : sortTopWins(previousBets);
+      if (tab === "top") return topBets;
       return allBets;
     },
     [allBets, previousBets, topBets]
   );
 
-  const viewMore = useCallback(() => {
-    setVisibleCount((prev) => prev + 12);
-  }, []);
+  const viewMore = useCallback(() => setVisibleCount((prev) => prev + 12), []);
+  const resetVisible = useCallback(() => setVisibleCount(12), []);
 
-  const resetVisible = useCallback(() => {
-    setVisibleCount(12);
-  }, []);
+  const applyTopFilters = useCallback(
+    async (period, metric) => {
+      setTopPeriod(period);
+      setTopMetric(metric);
+      setLoading(true);
+      const entries = await fetchLeaderboard(period, metric);
+      roundDispatch({ type: "SET_LEADERBOARD", payload: entries });
+      setLoading(false);
+    },
+    [fetchLeaderboard, roundDispatch]
+  );
 
   return {
     summaries,
@@ -251,6 +129,10 @@ const useBetsFeed = ({ isSpinning, roundStats, lastOutcome }) => {
     resetVisible,
     loading,
     hasMore: (tab) => getTabBets(tab).length > visibleCount,
+    topPeriod,
+    topMetric,
+    applyTopFilters,
+    isSpinning,
   };
 };
 

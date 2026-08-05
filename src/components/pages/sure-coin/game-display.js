@@ -3,85 +3,73 @@ import RotatingCoin from "./rotating-coin";
 import TakeBetsTimer from "./take-bets-timer";
 import OutcomePanel from "./outcome-panel";
 import RoundStatsPanel from "./round-stats-panel";
+import { useSureCoinRound } from "../../../context/surecoin-round";
 
 const GameDisplay = ({
   userCoinCount,
-  runCoinSpin,
+  isSpinning,
   userMuted,
-  nextSession,
-  prevSession,
   userSoundSet,
   isOnline,
   setPrepToStart,
   prepToStart,
   coinSettled,
   isDocumentVisible,
-  elizabeth,
-  setRunCoinSPin,
   roundStats,
   setCoinSettled,
-  setRoundStats,
-  startRound,
   lastOutcome,
   onOutcomeChange,
-}) => (
-  <div className="sc-game-display">
-    <div className="sc-game-stage">
-      <OutcomePanel outcome={lastOutcome} />
+}) => {
+  const { state: roundState } = useSureCoinRound();
+  const isWaiting = roundState.phase === "WAITING";
 
-      <div className="rotating-images-wrapper coin-sections relative">
-        {Array(userCoinCount)
-          .fill(1)
-          .map((_, idx) => (
-            <div className="rotating-image-container" key={`coin-${idx}`}>
-              <RotatingCoin
-                coinnumber={idx + 1}
-                isspinning={runCoinSpin}
-                usermuted={userMuted}
-                nxtSession={nextSession}
-                prevSession={prevSession}
-                userSoundSet={userSoundSet}
-                isOnline={isOnline}
-                setPrepToStart={setPrepToStart}
-                prepToStart={prepToStart}
-                coinSettled={coinSettled}
-                isDocumentVisible={isDocumentVisible}
-                cvterfxn={elizabeth}
-                onOutcomeChange={onOutcomeChange}
-              />
-            </div>
-          ))}
+  return (
+    <div className="sc-game-display">
+      <div className="sc-game-stage">
+        <OutcomePanel outcome={lastOutcome} />
+
+        <div className="rotating-images-wrapper coin-sections relative">
+          {Array(userCoinCount)
+            .fill(1)
+            .map((_, idx) => (
+              <div className="rotating-image-container" key={`coin-${idx}`}>
+                <RotatingCoin
+                  coinnumber={idx + 1}
+                  isspinning={isSpinning}
+                  usermuted={userMuted}
+                  userSoundSet={userSoundSet}
+                  prepToStart={prepToStart}
+                  coinSettled={coinSettled}
+                  onOutcomeChange={onOutcomeChange}
+                />
+              </div>
+            ))}
+        </div>
+
+        <RoundStatsPanel startRound={roundStats?.round} roundStats={roundStats} />
       </div>
 
-      <RoundStatsPanel startRound={startRound} roundStats={roundStats} />
-    </div>
+      <div className="sc-game-footer">
+        <div className="sc-director" aria-live="polite">
+          <div className="sc-director-title">
+            {isWaiting ? "CHOOSE HEADS OR TAILS" : "WAIT FOR NEXT ROUND"}
+          </div>
+          <div className="sc-director-sub">
+            {isWaiting ? "Pick your side and confirm to place your bet" : "\u00A0"}
+          </div>
+        </div>
 
-    <div className="sc-game-footer">
-      <div className="sc-director" aria-live="polite">
-        <div className="sc-director-title">
-          {!runCoinSpin ? "CHOOSE HEADS OR TAILS" : "WAIT FOR NEXT ROUND"}
-        </div>
-        <div className="sc-director-sub">
-          {!runCoinSpin
-            ? "Pick your side and confirm to place your bet"
-            : "\u00A0"}
-        </div>
+        {isWaiting && isOnline && isDocumentVisible ? (
+          <TakeBetsTimer
+            setPrepToStart={setPrepToStart}
+            setCoinSettled={setCoinSettled}
+          />
+        ) : (
+          <div className="bets-timer-empty-holder" aria-hidden="true" />
+        )}
       </div>
-
-      {!runCoinSpin && isOnline && isDocumentVisible ? (
-        <TakeBetsTimer
-          setRunCoinSpin={setRunCoinSPin}
-          roundStats={roundStats}
-          setPrepToStart={setPrepToStart}
-          prepToStart={prepToStart}
-          setCoinSettled={setCoinSettled}
-          setRoundStats={setRoundStats}
-        />
-      ) : (
-        <div className="bets-timer-empty-holder" aria-hidden="true" />
-      )}
     </div>
-  </div>
-);
+  );
+};
 
 export default React.memo(GameDisplay);

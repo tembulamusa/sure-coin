@@ -76,12 +76,12 @@
 
 .rotating-img.is-spinning,
 .sc-coin-mesh.is-spinning {
-    animation: coinFlipSpin 0.07s linear infinite;
+    animation: coinFlipSpin 0.018s linear infinite;
 }
 
 .rotating-img.prep-to-start,
 .sc-coin-mesh.prep-to-start {
-    animation: coinPrepSpin 1.8s linear infinite;
+    animation: coinPrepSpin 0.35s linear infinite;
 }
 
 .rotating-img.is-settling.settle-heads,

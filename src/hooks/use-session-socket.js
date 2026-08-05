@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useRef } from "react";
 import { Context } from "../context/store";
-import socket from "../components/utils/socket-connect";
+import socket, { isPlatformSocketEnabled } from "../components/utils/socket-connect";
 import {
   getFromLocalStorage,
   removeItem,
@@ -98,6 +98,10 @@ const useSessionSocket = () => {
   );
 
   useEffect(() => {
+    if (!isPlatformSocketEnabled) {
+      return undefined;
+    }
+
     try {
       if (!socket.connected) {
         socket.connect();
@@ -137,6 +141,10 @@ const useSessionSocket = () => {
 
   // Subscribe to live profile channel when a user is present
   useEffect(() => {
+    if (!isPlatformSocketEnabled) {
+      return undefined;
+    }
+
     const user = state?.user || getFromLocalStorage("user");
     const profileId = user?.profile_id;
     if (!profileId) {

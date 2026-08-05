@@ -1,10 +1,17 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Context } from "../../../context/store";
+import { useSureCoinRound } from "../../../context/surecoin-round";
+import {
+  connectSurecoinSocket,
+  getSurecoinSocket,
+} from "../../utils/surecoin-socket-connect";
+import { unlockSurecoinAudio } from "../../utils/surecoin-sound";
+import { dbgLog } from "../../utils/debug-log";
+import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
 import { FaCheck, FaCheckCircle } from "react-icons/fa";
 import { CgAdd, CgRemove } from "react-icons/cg";
 import { GiTwoCoins } from "react-icons/gi";
 import { MdOutlineGpsFixed } from "react-icons/md";
-import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
 import HeadsCoin from "../../../assets/surecoin/heads.png";
 import TailsCoin from "../../../assets/surecoin/tails.png";
 
@@ -25,55 +32,57 @@ const ScToggle = ({ checked, onChange, label }) => (
 );
 
 const CoinStakeChoice = (props) => {
-    const { coinnumber, isspinning, nxtSession } = props;
-    const [amount, setAmount] = useState(5);
+    const { coinnumber, isspinning, isDocumentVisible, isOnline } = props;
     const [state, dispatch] = useContext(Context);
+    const { canPlaceBet, canPickSide, state: roundState } = useSureCoinRound();
+    const [amount, setAmount] = useState(5);
     const [inputErrors, setInputErrors] = useState({});
     const [defaultAmountChange] = useState(10);
-    const [minimumBetAmount] = useState(5);
     const [pickedBtn, setPickedBtn] = useState(null);
     const [autoBet, setAutoBet] = useState(false);
     const [autoBetsLeft, setAutoBetsLeft] = useState(DEFAULT_AUTO_ROUNDS);
     const [userPlaceBetOn, setUserPlaceBetOn] = useState(false);
     const [autoPick, setAutoPick] = useState(false);
+    const autoBetPendingRef = useRef(false);
+
+    const minimumBetAmount = roundState.config?.minBetAmount ?? 5;
+    const payoutMultiplier = roundState.config?.payoutMultiplier ?? 2;
+    const user = state?.user || getFromLocalStorage("user");
+    const hasConfirmedBet = Boolean(roundState.myBet);
+    const confirmed = userPlaceBetOn && hasConfirmedBet;
 
     const setcanplayTheitems = () => {
-        let itemtoplay = "canplayitems-" + coinnumber;
+        const itemtoplay = `canplayitems-${coinnumber}`;
         if (!state?.[itemtoplay]) {
             dispatch({ type: "SET", key: itemtoplay, payload: true });
         }
     };
 
     const amountChanged = (e) => {
-        let value = parseInt(e.target.value);
-        setAmount(value);
+        setAmount(parseInt(e.target.value, 10) || minimumBetAmount);
     };
 
     const unfocus = () => {
-        if (amount < 5) {
-            setAmount(5);
+        if (amount < minimumBetAmount) {
+            setAmount(minimumBetAmount);
         }
     };
 
     useEffect(() => {
         const getDefaultUserAmount = getFromLocalStorage("userDefaultCoinAmount");
         if (getDefaultUserAmount) {
-            setAmount(getDefaultUserAmount);
+            setAmount(Math.max(getDefaultUserAmount, minimumBetAmount));
         } else {
-            setAmount(5);
+            setAmount(minimumBetAmount);
         }
-    }, []);
+    }, [minimumBetAmount]);
 
     const changeAmount = (changeType) => {
         if (changeType === "increase") {
             setAmount(defaultAmountChange + amount);
         } else if (changeType === "decrease") {
-            let newAmount = amount - defaultAmountChange;
-            if (newAmount > minimumBetAmount) {
-                setAmount(newAmount);
-            } else {
-                setAmount(minimumBetAmount);
-            }
+            const newAmount = amount - defaultAmountChange;
+            setAmount(newAmount > minimumBetAmount ? newAmount : minimumBetAmount);
         }
     };
 
@@ -86,41 +95,81 @@ const CoinStakeChoice = (props) => {
 
     const coinsideAutopick = () => {
         const choices = ["heads", "tails"];
-        const i = Math.floor(Math.random() * 2);
-        setPickedBtn(choices[i]);
+        setPickedBtn(choices[Math.floor(Math.random() * 2)]);
+    };
+
+    const emitBet = (pick, stake) => {
+        if (!user?.profile_id || !pick) return;
+
+        const socket = getSurecoinSocket();
+        if (!socket.connected) {
+            connectSurecoinSocket();
+        }
+
+        const sessionId = `${user.profile_id}:${roundState.roundId ?? roundState.roundNumber}`;
+        const idempotencyKey = `${user.profile_id}-${roundState.roundId ?? "round"}-${Date.now()}`;
+
+        socket.emit("bet:place", {
+            coin_side: String(pick).toUpperCase(),
+            bet_amount: stake,
+            session_id: sessionId,
+            idempotency_key: idempotencyKey,
+        });
+    };
+
+    const placeConfirmedBet = (pick = pickedBtn, stake = amount) => {
+        if (!pick) {
+            setInputErrors({ ...inputErrors, userPick: "unpicked button" });
+            return;
+        }
+        if (!canPlaceBet || !user?.profile_id || !isOnline || !isDocumentVisible) {
+            return;
+        }
+        setUserPlaceBetOn(true);
+        emitBet(pick, stake);
     };
 
     useEffect(() => {
-        if (isspinning == false) {
-            let timeOutId;
-            if (autoBet) {
-                if (autoBetsLeft > 0) {
-                    setUserPlaceBetOn(false);
-                    timeOutId = setTimeout(() => {
-                        if (!pickedBtn) {
-                            coinsideAutopick();
-                        }
-                        setUserPlaceBetOn(true);
-                        setAutoBetsLeft((prev) => prev - 1);
-                    }, 1000);
-                }
-            }
-            return () => clearTimeout(timeOutId);
-        } else {
-            if (!autoBet) {
-                setAutoPick(false);
-            }
+        if (isspinning) {
             setPickedBtn(null);
             setUserPlaceBetOn(false);
+            return;
         }
-    }, [isspinning]);
 
-    const pickClick = (pick) => {
-        if (pick === "tails") {
-            setPickedBtn("tails");
-        } else if (pick === "heads") {
-            setPickedBtn("heads");
+        if (autoBet && autoBetsLeft > 0 && canPlaceBet && !hasConfirmedBet) {
+            const timer = setTimeout(() => {
+                let side = pickedBtn;
+                if (!side && autoPick) {
+                    const choices = ["heads", "tails"];
+                    side = choices[Math.floor(Math.random() * 2)];
+                    setPickedBtn(side);
+                }
+                if (side) {
+                    placeConfirmedBet(side, amount);
+                    setAutoBetsLeft((prev) => prev - 1);
+                }
+            }, 800);
+            return () => clearTimeout(timer);
         }
+        return undefined;
+    }, [roundState.roundId, canPlaceBet, hasConfirmedBet, autoBet, autoBetsLeft, isspinning]);
+
+    useEffect(() => {
+        if (roundState.phase === "WAITING" && roundState.myBet) {
+            setUserPlaceBetOn(true);
+            setPickedBtn(String(roundState.myBet.coinSide).toLowerCase());
+        }
+        if (roundState.phase === "WAITING" && !roundState.myBet) {
+            setUserPlaceBetOn(false);
+        }
+    }, [roundState.phase, roundState.myBet, roundState.roundId]);
+
+    const pickClick = async (pick) => {
+        // #region agent log
+        dbgLog("coin-stake-choice.js:pickClick", "HEADS/TAILS clicked", { pick, canPickSide, disabled: hasConfirmedBet || !canPickSide }, "H4");
+        // #endregion
+        await unlockSurecoinAudio();
+        setPickedBtn(pick);
     };
 
     useEffect(() => {
@@ -131,23 +180,23 @@ const CoinStakeChoice = (props) => {
                 key: "coinselections",
                 payload: state?.coinselections
                     ? {
-                          ...state?.coinselections,
+                          ...state.coinselections,
                           [coinnumber]: {
                               pick: pickedBtn,
-                              amount: amount,
+                              amount,
                               userbeton: userPlaceBetOn,
                           },
                       }
                     : {
                           [coinnumber]: {
                               pick: pickedBtn,
-                              amount: amount,
+                              amount,
                               userbeton: userPlaceBetOn,
                           },
                       },
             });
         }
-    }, [amount, pickedBtn, userPlaceBetOn]);
+    }, [amount, pickedBtn, userPlaceBetOn, coinnumber, dispatch, state?.coinselections]);
 
     const autoBetToggle = () => {
         if (!autoBet) {
@@ -179,7 +228,6 @@ const CoinStakeChoice = (props) => {
 
     const unfocusAutoRounds = () => {
         if (autoBet) {
-            // Mid-run edits set remaining rounds; 0 stops Auto Bet via the effect above.
             if (Number.isNaN(Number(autoBetsLeft)) || autoBetsLeft < 0) {
                 setAutoBetsLeft(0);
             }
@@ -190,22 +238,28 @@ const CoinStakeChoice = (props) => {
         }
     };
 
-    const pressBetButton = () => {
-        if (pickedBtn) {
-            setUserPlaceBetOn(true);
-        } else {
-            setInputErrors({ ...inputErrors, userPick: "unpicked button" });
-        }
-    };
-
     useEffect(() => {
         if (state?.promptdepositrequest?.show) {
             setAutoBet(false);
         }
     }, [state?.promptdepositrequest]);
 
-    const confirmed = nxtSession?.coinselections?.[coinnumber]?.userbeton;
-    const hasPick = nxtSession?.coinselections?.[coinnumber]?.pick;
+    const hasPick = pickedBtn || state?.coinselections?.[coinnumber]?.pick;
+
+    useEffect(() => {
+        // #region agent log
+        dbgLog("coin-stake-choice.js:state", "bet controls state", {
+            canPickSide,
+            canPlaceBet,
+            phase: roundState.phase,
+            connected: roundState.connected,
+            secondsRemaining: roundState.secondsRemaining,
+            hasConfirmedBet,
+            hasMyBet: Boolean(roundState.myBet),
+            headsDisabled: hasConfirmedBet || !canPickSide,
+        }, "H2");
+        // #endregion
+    }, [canPickSide, canPlaceBet, roundState.phase, roundState.connected, roundState.secondsRemaining, hasConfirmedBet, roundState.myBet]);
 
     return (
         <div className="sc-bet-panel" onClick={() => setcanplayTheitems()}>
@@ -225,7 +279,7 @@ const CoinStakeChoice = (props) => {
                                     <CgRemove aria-hidden="true" />
                                 </button>
                                 <input
-                                    onChange={(e) => amountChanged(e)}
+                                    onChange={amountChanged}
                                     type="number"
                                     value={amount}
                                     min={minimumBetAmount}
@@ -248,13 +302,13 @@ const CoinStakeChoice = (props) => {
                         <label>Odds</label>
                         <div className="sc-odds-value">
                             <span className="sc-odds-x">x</span>
-                            <strong>2.00</strong>
+                            <strong>{payoutMultiplier.toFixed(2)}</strong>
                         </div>
                     </div>
                     <div className="sc-bet-field">
                         <label>Payout</label>
                         <div className="sc-payout-value">
-                            KES. {(amount * 2).toFixed(2)}
+                            KES. {(amount * payoutMultiplier).toFixed(2)}
                         </div>
                     </div>
                 </div>
@@ -280,11 +334,6 @@ const CoinStakeChoice = (props) => {
                                     max={MAX_AUTO_ROUNDS}
                                     min={0}
                                     aria-label="Auto rounds"
-                                    title={
-                                        autoBet
-                                            ? "Rounds left (editable)"
-                                            : "Number of auto rounds"
-                                    }
                                 />
                             </div>
                         </div>
@@ -313,6 +362,7 @@ const CoinStakeChoice = (props) => {
                     type="button"
                     className={`sc-side-btn ${pickedBtn === "heads" ? "selected" : ""}`}
                     onClick={() => pickClick("heads")}
+                    disabled={hasConfirmedBet || !canPickSide}
                 >
                     <img src={HeadsCoin} alt="" className="sc-side-coin" />
                     HEADS
@@ -322,6 +372,7 @@ const CoinStakeChoice = (props) => {
                     type="button"
                     className={`sc-side-btn ${pickedBtn === "tails" ? "selected" : ""}`}
                     onClick={() => pickClick("tails")}
+                    disabled={hasConfirmedBet || !canPickSide}
                 >
                     <img src={TailsCoin} alt="" className="sc-side-coin" />
                     TAILS
@@ -329,11 +380,11 @@ const CoinStakeChoice = (props) => {
                 </button>
                 <button
                     type="button"
-                    disabled={!hasPick || confirmed}
+                    disabled={!hasPick || confirmed || !canPlaceBet || !user?.profile_id}
                     className={`sc-confirm-btn ${!hasPick ? "disabled" : ""} ${
                         confirmed ? "confirmed" : ""
                     }`}
-                    onClick={() => pressBetButton()}
+                    onClick={() => placeConfirmedBet()}
                 >
                     <FaCheckCircle />
                     {confirmed ? "CONFIRMED" : "CONFIRM PICK"}

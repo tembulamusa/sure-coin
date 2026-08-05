@@ -8,6 +8,7 @@ const CASINOGAMES = process.env.REACT_APP_CASINO_URL;
 const CASINOGAMELaunch = process.env.REACT_APP_CASINO_LAUNCH_URL;
 const CASINOFAZI = process.env.REACT_APP_CASINOFAZI_URL;
 const SURECOIN_URL = process.env.REACT_APP_SURECOIN_URL;
+const SURECOIN_PUBLIC_URL = process.env.REACT_APP_SURECOIN_PUBLIC_URL || SURECOIN_URL?.replace(/\/user\/?$/, "/");
 const SUREBOX_URL = process.env.REACT_APP_SUREBOX_URL;
 const PRAGMATIC_JACKPOT_URL = process.env.REACT_APP_PRAGMATIC_JACKPOT_URL;
 const AVIATRIX_URL = process.env.REACT_APP_AVIATRIX_URL;
@@ -25,6 +26,8 @@ const makeRequest = async ({url, method, data = null, use_jwt = false, api_versi
         } else {
             if (api_version == "sureCoin") {
                 url = SURECOIN_URL + url;
+            } else if (api_version == "sureCoinPublic") {
+                url = SURECOIN_PUBLIC_URL + url.replace(/^\//, "");
             } else if (api_version == "sureBox") {
                 url = SUREBOX_URL + url;
             } else if (api_version == "casinoGames") {

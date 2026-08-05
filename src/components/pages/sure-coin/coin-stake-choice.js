@@ -6,7 +6,6 @@ import {
   getSurecoinSocket,
 } from "../../utils/surecoin-socket-connect";
 import { unlockSurecoinAudio } from "../../utils/surecoin-sound";
-import { dbgLog } from "../../utils/debug-log";
 import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
 import { FaCheck, FaCheckCircle } from "react-icons/fa";
 import { CgAdd, CgRemove } from "react-icons/cg";
@@ -165,9 +164,6 @@ const CoinStakeChoice = (props) => {
     }, [roundState.phase, roundState.myBet, roundState.roundId]);
 
     const pickClick = async (pick) => {
-        // #region agent log
-        dbgLog("coin-stake-choice.js:pickClick", "HEADS/TAILS clicked", { pick, canPickSide, disabled: hasConfirmedBet || !canPickSide }, "H4");
-        // #endregion
         await unlockSurecoinAudio();
         setPickedBtn(pick);
     };
@@ -245,21 +241,6 @@ const CoinStakeChoice = (props) => {
     }, [state?.promptdepositrequest]);
 
     const hasPick = pickedBtn || state?.coinselections?.[coinnumber]?.pick;
-
-    useEffect(() => {
-        // #region agent log
-        dbgLog("coin-stake-choice.js:state", "bet controls state", {
-            canPickSide,
-            canPlaceBet,
-            phase: roundState.phase,
-            connected: roundState.connected,
-            secondsRemaining: roundState.secondsRemaining,
-            hasConfirmedBet,
-            hasMyBet: Boolean(roundState.myBet),
-            headsDisabled: hasConfirmedBet || !canPickSide,
-        }, "H2");
-        // #endregion
-    }, [canPickSide, canPlaceBet, roundState.phase, roundState.connected, roundState.secondsRemaining, hasConfirmedBet, roundState.myBet]);
 
     return (
         <div className="sc-bet-panel" onClick={() => setcanplayTheitems()}>

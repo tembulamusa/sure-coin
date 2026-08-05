@@ -12,7 +12,6 @@ import {
     isSurecoinAudioUnlocked,
     unlockSurecoinAudio,
 } from "../../utils/surecoin-sound";
-import { dbgLog } from "../../utils/debug-log";
 
 const SureCoinIndex = () => {
     const [state, dispatch] = useContext(Context);
@@ -138,12 +137,6 @@ const SureCoinIndex = () => {
         return () =>
             window.removeEventListener("surecoin:sound-unlocked", onUnlocked);
     }, []);
-
-    useEffect(() => {
-        // #region agent log
-        dbgLog("index.js:sound-ui", "sound prompt state", { userSoundSet, userMuted, promptVisible: userSoundSet === false }, "H3");
-        // #endregion
-    }, [userSoundSet, userMuted]);
 
     return (
         <div className="launched-sure-coin">

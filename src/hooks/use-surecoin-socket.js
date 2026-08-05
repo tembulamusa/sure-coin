@@ -12,7 +12,6 @@ import {
 } from "../components/utils/local-storage";
 import makeRequest from "../components/utils/fetch-request";
 import { maskPlayerName } from "../components/pages/sure-coin/betting-sidebar/bets-feed";
-import { dbgLog } from "../components/utils/debug-log";
 
 const ROUND_EVENTS = [
   "round:sync",
@@ -197,9 +196,6 @@ const useSurecoinSocket = () => {
     const token = user?.token;
 
     if (!profileId || !token) {
-      // #region agent log
-      dbgLog("use-surecoin-socket.js:no-user", "socket skipped — no user/token", { hasProfileId: Boolean(profileId), hasToken: Boolean(token) }, "H1");
-      // #endregion
       disconnectSurecoinSocket();
       roundDispatch({ type: "SET_CONNECTED", payload: false });
       profileIdRef.current = null;
@@ -214,24 +210,14 @@ const useSurecoinSocket = () => {
     fetchLeaderboard();
 
     const onConnect = () => {
-      // #region agent log
-      dbgLog("use-surecoin-socket.js:connect", "socket connected", { socketId: socket.id }, "H1");
-      // #endregion
       roundDispatch({ type: "SET_CONNECTED", payload: true });
     };
 
     const onDisconnect = () => {
-      // #region agent log
-      dbgLog("use-surecoin-socket.js:disconnect", "socket disconnected", {}, "H1");
-      // #endregion
       roundDispatch({ type: "SET_CONNECTED", payload: false });
     };
 
-    const onConnectError = (err) => {
-      // #region agent log
-      dbgLog("use-surecoin-socket.js:connect_error", "socket connect_error", { message: err?.message }, "H1");
-      // #endregion
-    };
+    const onConnectError = () => {};
 
     const lastTickMsRef = { current: 0 };
     const onRoundEvent = (eventName, payload) => {
@@ -241,11 +227,6 @@ const useSurecoinSocket = () => {
           return;
         }
         lastTickMsRef.current = now;
-      }
-      if (eventName === "round:sync" || eventName === "round:tick" || eventName === "round:flip_start") {
-        // #region agent log
-        dbgLog("use-surecoin-socket.js:round-event", eventName, { phase: payload?.phase, seconds: payload?.seconds_remaining, progress: payload?.progress }, eventName === "round:flip_start" ? "H4" : "H2");
-        // #endregion
       }
       handleRoundPayload(eventName, payload);
     };

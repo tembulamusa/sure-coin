@@ -9,7 +9,6 @@ import {
     playWinSound,
     setSpinSoundActive,
 } from "../../utils/surecoin-sound";
-import { dbgLog } from "../../utils/debug-log";
 
 const normalizeSide = (value) => {
     const side = String(value || "").trim().toLowerCase();
@@ -131,18 +130,6 @@ const RotatingCoin = (props) => {
     useEffect(() => {
         const soundEnabled =
             !usermuted && (userSoundSet || isSurecoinAudioUnlocked());
-        // #region agent log
-        dbgLog("rotating-coin.js:anim", "coin animation state", {
-            isspinning,
-            phase: roundState.phase,
-            prepToStart,
-            isSettling,
-            speedLevel: rotatingSpeedLevel,
-            flipProgress: roundState.flipProgress,
-            soundEnabled,
-            userMuted: usermuted,
-        }, "H4");
-        // #endregion
         if (!soundEnabled) {
             setSpinSoundActive(false, true);
             return;

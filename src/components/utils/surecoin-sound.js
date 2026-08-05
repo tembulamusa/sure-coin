@@ -1,8 +1,6 @@
 import SoundSpin from "../../assets/audio/surecoin/coin.mp3";
 import SoundSpill from "../../assets/audio/surecoin/coin-spill.mp3";
 import WinSound from "../../assets/audio/surecoin/win-mixkit.wav";
-import { dbgLog } from "./debug-log";
-
 const STORAGE_KEY = "surecoin_audio_unlocked";
 const SPIN_VOLUME = 1;
 const GAIN_BOOST = 2.8;
@@ -79,14 +77,8 @@ export const unlockSurecoinAudio = async () => {
     unlocked = true;
     sessionStorage.setItem(STORAGE_KEY, "1");
     window.dispatchEvent(new Event("surecoin:sound-unlocked"));
-    // #region agent log
-    dbgLog("surecoin-sound.js:unlock", "audio unlocked", { gain: GAIN_BOOST }, "H5");
-    // #endregion
     return true;
   } catch (err) {
-    // #region agent log
-    dbgLog("surecoin-sound.js:unlock", "audio unlock failed", { message: err?.message }, "H5");
-    // #endregion
     return false;
   }
 };
@@ -94,9 +86,6 @@ export const unlockSurecoinAudio = async () => {
 export const setSpinSoundActive = async (active, muted) => {
   const audioUnlocked = isSurecoinAudioUnlocked();
   if (muted || !audioUnlocked) {
-    // #region agent log
-    dbgLog("surecoin-sound.js:spin", "spin sound blocked", { active, muted, unlocked: audioUnlocked }, "H5");
-    // #endregion
     if (spinAudio) {
       spinAudio.pause();
     }
@@ -110,21 +99,12 @@ export const setSpinSoundActive = async (active, muted) => {
         audio.currentTime = 0;
         await audio.play();
       }
-      // #region agent log
-      dbgLog("surecoin-sound.js:spin", "spin sound playing", {
-        volume: audio.volume,
-        gain: GAIN_BOOST,
-        paused: audio.paused,
-      }, "H5");
-      // #endregion
     } else {
       audio.pause();
       audio.currentTime = 0;
     }
   } catch (err) {
-    // #region agent log
-    dbgLog("surecoin-sound.js:spin", "spin sound play failed", { message: err?.message }, "H5");
-    // #endregion
+    // ignore autoplay / unlock failures
   }
 };
 
@@ -142,8 +122,6 @@ export const playWinSound = async (muted) => {
     await ensureGainNode();
     await winAudio.play();
   } catch (err) {
-    // #region agent log
-    dbgLog("surecoin-sound.js:win", "win sound play failed", { message: err?.message }, "H5");
-    // #endregion
+    // ignore autoplay failures
   }
 };

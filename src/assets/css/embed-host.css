@@ -1,11 +1,11 @@
 /* Host page that wraps Surecoin in a max-960px iframe.
-   Area outside the iframe stays transparent so parent pages show through. */
+   Area outside the iframe uses a dark charcoal fill. */
 
 html:has(.sc-embed-host),
 html:has(.sc-embed-host) body,
 html:has(.sc-embed-host) #app {
-  background: transparent;
-  background-color: transparent;
+  background: #0a0a0a;
+  background-color: #0a0a0a;
 }
 
 .sc-embed-host {
@@ -18,7 +18,7 @@ html:has(.sc-embed-host) #app {
   min-height: 100dvh;
   margin: 0;
   padding: 0;
-  background: transparent;
+  background: #0a0a0a;
 }
 
 .sc-embed-host__frame {
@@ -31,5 +31,5 @@ html:has(.sc-embed-host) #app {
   border: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
-  background: transparent;
+  background: #0a0a0a;
 }

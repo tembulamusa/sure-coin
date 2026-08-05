@@ -66,13 +66,14 @@ const BodyLogin = (props) => {
   }, [message, Notify]);
 
   const handleSubmit = (values) => {
-    const endpoint = "/v2/auth/login";
+    const useSurecoinAuth = process.env.REACT_APP_LOCAL_SIM !== "true";
+    const endpoint = useSurecoinAuth ? "auth/login" : "/v2/auth/login";
     setIsLoading(true);
     makeRequest({
       url: endpoint,
       method: "POST",
       data: values,
-      api_version: 2,
+      api_version: useSurecoinAuth ? "sureCoinPublic" : 2,
     }).then(([status, response]) => {
       if (status == 200 || status == 201 || status == 204) {
         if (response.status == 200 || response.status == 201) {

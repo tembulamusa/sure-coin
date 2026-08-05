@@ -195,14 +195,7 @@ const useSurecoinSocket = () => {
     const profileId = user?.profile_id;
     const token = user?.token;
 
-    if (!profileId || !token) {
-      disconnectSurecoinSocket();
-      roundDispatch({ type: "SET_CONNECTED", payload: false });
-      profileIdRef.current = null;
-      return undefined;
-    }
-
-    profileIdRef.current = profileId;
+    profileIdRef.current = profileId || null;
     const socket = connectSurecoinSocket();
 
     fetchConfig();

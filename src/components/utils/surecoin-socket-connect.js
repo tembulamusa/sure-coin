@@ -9,7 +9,7 @@ let socketInstance = null;
 export const getSurecoinSocket = () => {
   if (!socketInstance) {
     socketInstance = io(SOCKET_URL, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -25,16 +25,17 @@ export const connectSurecoinSocket = () => {
   const user = getFromLocalStorage("user");
   const token = user?.token;
 
-  if (!token) {
-    return socket;
+  if (token) {
+    socket.auth = { token };
+    socket.io.opts.query = { token };
+    socket.io.opts.extraHeaders = {
+      Authorization: `Bearer ${token}`,
+    };
+  } else {
+    socket.auth = {};
+    socket.io.opts.query = {};
+    socket.io.opts.extraHeaders = {};
   }
-
-  // Browsers cannot set Authorization on WebSocket — pass token via query + auth payload.
-  socket.auth = { token };
-  socket.io.opts.query = { token };
-  socket.io.opts.extraHeaders = {
-    Authorization: `Bearer ${token}`,
-  };
 
   if (!socket.connected) {
     socket.connect();

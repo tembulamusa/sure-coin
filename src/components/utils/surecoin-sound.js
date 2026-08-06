@@ -3,6 +3,7 @@ import SoundWin from "../../assets/audio/surecoin/coin-win.mp3";
 import SoundSpinDefault from "../../assets/audio/surecoin/coin-spin.mp3";
 import SoundWobble from "../../assets/audio/surecoin/coin-wobble.mp3";
 import SoundMetalCoinSpin from "../../assets/audio/surecoin/metal-coin-spin.mp3";
+import SoundCoinSpinMetal from "../../assets/audio/surecoin/coin-spin-metal.mp3";
 // Extracted from Surebet casino coins.mp4 (AAC → mp3) for Web Audio decodeAudioData.
 import SoundCoins from "../../assets/audio/surecoin/coins.mp3";
 
@@ -42,8 +43,9 @@ export const SURECOIN_SPIN_SOUND_OPTIONS = {
   // https://bigsoundbank.com/coin-spinning-on-a-table-1-s2697.html
   // License: CC0 1.0 (public domain) — commercial use OK, attribution optional.
   // €2 metal coin spinning on a varnished wooden table (Pierre SIBANARCO / Joseph Sardin).
+  // Kept for A/B — wood surface (duller) vs coin-spin-metal (true metal).
   "metal-coin-spin": {
-    label: "Metal Coin Spin",
+    label: "Metal Coin Spin (wood table)",
     src: SoundMetalCoinSpin,
     // Measured (~12.00s): first audible ~0.04s; bright attack ~0.12–0.60s;
     // continuous metallic spin body ~0.80–3.10s; settle/wobble rises after ~5.2s.
@@ -51,6 +53,20 @@ export const SURECOIN_SPIN_SOUND_OPTIONS = {
     startOffset: 0.08,
     loopStart: 0.8,
     loopEndPadding: 8.9,
+  },
+  // Source: Freesound #538028 "Rolling Coin.wav" by antwerpsounddesign
+  // https://freesound.org/people/antwerpsounddesign/sounds/538028/
+  // License: CC0 1.0 (public domain) — commercial use OK, attribution optional.
+  // Metal coin spinning on a metal bucket (Zoom H5). Converted/EQ'd to coin-spin-metal.mp3.
+  "coin-spin-metal": {
+    label: "Coin Spin Metal",
+    src: SoundCoinSpinMetal,
+    // Measured (~6.00s): first audible ~0.04s; continuous metallic spin body
+    // ~0.16–1.56s; quiet gap then settle/wobble rises ~3.0–5.15s.
+    // Loop the bright metal-on-metal spin only (skip onset + late wobble).
+    startOffset: 0.06,
+    loopStart: 0.18,
+    loopEndPadding: 4.44,
   },
   coins: {
     label: "Coins (Surebet)",
@@ -64,7 +80,7 @@ export const SURECOIN_SPIN_SOUND_OPTIONS = {
 };
 
 // Active rolling/spinning loop (audible). `coins` retained in map but silent.
-export const ACTIVE_SURECOIN_SPIN_SOUND_KEY = "metal-coin-spin";
+export const ACTIVE_SURECOIN_SPIN_SOUND_KEY = "coin-spin-metal";
 
 let unlocked = false;
 let winAudio = null;

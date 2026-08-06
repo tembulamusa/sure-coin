@@ -99,7 +99,7 @@ const RotatingCoin = (props) => {
     const settleFromYawRef = useRef(0);
     const settleAnimRef = useRef(null);
 
-    const visuallySpinning = (isspinning || holdSpin) && !isSettling;
+    const visuallySpinning = isspinning || holdSpin;
 
     useEffect(() => {
         onOutcomeChangeRef.current = onOutcomeChange;
@@ -152,10 +152,8 @@ const RotatingCoin = (props) => {
         }
 
         if (wasSpinningRef.current && settledSide) {
-            // Capture yaw while holdSpin still keeps coinYawSpin running this paint.
-            settleFromYawRef.current = readCoinYawDeg(meshRef.current);
+            // Keep holdSpin until useLayoutEffect captures live yaw + starts WAAPI.
             setIsSettling(true);
-            setHoldSpin(false);
             wasSpinningRef.current = false;
             return;
         }
@@ -169,20 +167,24 @@ const RotatingCoin = (props) => {
         }
     }, [isspinning, roundState.winningSide, roundState.lastResolved, roundState.phase]);
 
-    // Seamless settle: continue from captured yaw (WAAPI). CSS settle-* is fallback only.
+    // Seamless settle: read yaw while spin class still on, then decelerate via WAAPI.
     useLayoutEffect(() => {
         if (!isSettling || !coinOnDisplay) return undefined;
+        if (settleAnimRef.current) return undefined;
         const el = meshRef.current;
-        if (!el || typeof el.animate !== "function") return undefined;
+        if (!el || typeof el.animate !== "function") {
+            // CSS settle-* fallback — drop hold so keyframes can run.
+            setHoldSpin(false);
+            return undefined;
+        }
 
-        const from = settleFromYawRef.current;
+        const from = readCoinYawDeg(el);
+        settleFromYawRef.current = from;
         const to = settleTargetYaw(from, coinOnDisplay);
 
-        // Suppress CSS settle keyframes so they don't restart from rotateY(0).
-        // Important beats stylesheet settle; spin !important is already off (no is-spinning).
+        // Kill CSS spin/settle (!important) so WAAPI owns transform until finish.
         el.style.setProperty("animation", "none", "important");
 
-        settleAnimRef.current?.cancel();
         const anim = el.animate(
             [
                 { transform: `translateY(-6px) rotateY(${from}deg)` },
@@ -195,6 +197,8 @@ const RotatingCoin = (props) => {
             }
         );
         settleAnimRef.current = anim;
+        // Drop is-spinning on next paint; WAAPI already holds the transform.
+        setHoldSpin(false);
 
         const finish = () => {
             if (settleAnimRef.current === anim) {
@@ -212,6 +216,7 @@ const RotatingCoin = (props) => {
             }
             el.style.removeProperty("animation");
         };
+        // holdSpin intentionally omitted: clearing it must not cancel this WAAPI.
     }, [isSettling, coinOnDisplay]);
 
     useEffect(() => {
@@ -264,7 +269,7 @@ const RotatingCoin = (props) => {
         // when idle — otherwise unlockSurecoinAudio sees spinWanted=false and
         // cannot recover audible playback after a suspended context.
         if (usermuted) {
-            if (visuallySpinning) {
+            if (visuallySpinning && !isSettling) {
                 setSpinSoundActive(true, true, { phase: "spin" });
             } else if (isSettling) {
                 setSpinSoundActive(true, true, { phase: "settle" });
@@ -274,7 +279,7 @@ const RotatingCoin = (props) => {
             return undefined;
         }
 
-        if (visuallySpinning) {
+        if (visuallySpinning && !isSettling) {
             // If not unlocked yet, keep spinWanted with muted=true so a later
             // gesture/unlock can start the loop mid-flip.
             setSpinSoundActive(true, !unlocked, { phase: "spin" });
@@ -295,7 +300,7 @@ const RotatingCoin = (props) => {
     // If audio unlocks mid-flip (unmute / confirm / pick), force-restart the loop.
     useEffect(() => {
         const onUnlocked = () => {
-            if (!visuallySpinning) return;
+            if (!visuallySpinning || isSettling) return;
             // usermuted may still be true in this closure for one tick after
             // enable-sound; unlockSurecoinAudio already restarts when spinWanted.
             // Force again once unmuted / when the gesture event fires.
@@ -308,7 +313,7 @@ const RotatingCoin = (props) => {
         window.addEventListener("surecoin:sound-unlocked", onUnlocked);
         return () =>
             window.removeEventListener("surecoin:sound-unlocked", onUnlocked);
-    }, [visuallySpinning, usermuted]);
+    }, [visuallySpinning, isSettling, usermuted]);
 
     const handleCoinAreaPointer = () => {
         // User gesture on the coin primes Web Audio so the next/current spin can be heard.
@@ -321,7 +326,11 @@ const RotatingCoin = (props) => {
             : "";
     // settle-* CSS is fallback when WAAPI is unavailable; WAAPI clears animation inline.
     const settleClass =
-        isSettling && coinOnDisplay ? `is-settling settle-${coinOnDisplay}` : "";
+        isSettling && coinOnDisplay && !holdSpin
+            ? `is-settling settle-${coinOnDisplay}`
+            : isSettling
+              ? "is-settling"
+              : "";
 
     const payout =
         roundState.lastResolved?.payout ??

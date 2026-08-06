@@ -245,10 +245,11 @@ body,
 }
 
 /* Account drawer (BetMundial-style, Surecoin gold accents) */
+/* Above .sc-outcome-panel (100000) so open account UI is not covered */
 .sc-acct-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 200000;
   background: rgba(0, 0, 0, 0.62);
   display: flex;
   justify-content: flex-end;
@@ -1042,18 +1043,8 @@ body,
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  /* Soft stage wash — keeps coin area from reading as a flat panel */
-  background:
-    radial-gradient(
-      ellipse 72% 58% at 50% 42%,
-      rgba(255, 193, 7, 0.055) 0%,
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 100% 90% at 50% 55%,
-      #141210 0%,
-      transparent 70%
-    );
+  /* Neutral dark stage — no warm/gold wash behind the coin */
+  background: #050505;
 }
 
 .sc-outcome-panel {
@@ -1170,19 +1161,13 @@ body,
   container-type: size;
   container-name: sc-coin;
   border-radius: 18px;
-  /* Atmospheric vignette — brass/gold accents on dark casino base */
+  /* Near-black stage — subtle radial, no brass/gold vignette */
   background:
     radial-gradient(
-      ellipse 55% 50% at 50% 46%,
-      rgba(232, 197, 106, 0.1) 0%,
-      rgba(180, 130, 50, 0.04) 38%,
-      transparent 68%
-    ),
-    radial-gradient(
       ellipse 95% 85% at 50% 50%,
-      #1a1712 0%,
-      #12100e 52%,
-      #0c0c0c 100%
+      #0a0a0a 0%,
+      #050505 55%,
+      #000000 100%
     );
 }
 
@@ -2560,6 +2545,17 @@ body,
 }
 
 /* —— Login modal (Surecoin dark + gold) —— */
+/* Stack above .sc-outcome-panel (z-index 100000); Bootstrap defaults (~1050/1055) lose */
+.modal:has(.sc-login-modal),
+.modal:has(.popover-login-modal) {
+  z-index: 200001;
+}
+
+body:has(.modal.show .sc-login-modal) .modal-backdrop,
+body:has(.modal.show .popover-login-modal) .modal-backdrop {
+  z-index: 200000;
+}
+
 .sc-login-modal {
   max-width: 420px;
   margin: 1.25rem auto;

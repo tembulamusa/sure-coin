@@ -126,7 +126,7 @@
 
 .rotating-img.is-spinning,
 .sc-coin-mesh.is-spinning {
-    animation: coinYawSpin 0.06s linear infinite;
+    animation: coinYawSpin 0.008s linear infinite;
 }
 
 .rotating-img.prep-to-start,
@@ -136,12 +136,12 @@
 
 .rotating-img.is-settling.settle-heads,
 .sc-coin-mesh.is-settling.settle-heads {
-    animation: coinSettleHeads 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+    animation: coinSettleHeads 0.42s cubic-bezier(0.05, 0.8, 0.12, 1) forwards;
 }
 
 .rotating-img.is-settling.settle-tails,
 .sc-coin-mesh.is-settling.settle-tails {
-    animation: coinSettleTails 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+    animation: coinSettleTails 0.42s cubic-bezier(0.05, 0.8, 0.12, 1) forwards;
 }
 
 .rotating-img.face-heads,
@@ -166,19 +166,15 @@
     to   { transform: translateY(-2px) rotateY(360deg); }
 }
 
-/* Even full turns (n×360) land on heads; +180 lands on tails */
+/* Fallback settle: short decelerate into face (WAAPI is primary in rotating-coin.js) */
 @keyframes coinSettleHeads {
-    0%   { transform: translateY(-16px) rotateY(0deg); }
-    55%  { transform: translateY(-5px) rotateY(1080deg); }
-    82%  { transform: translateY(-2px) rotateY(1360deg); }
-    100% { transform: translateY(0) rotateY(1440deg); }
+    0%   { transform: translateY(-6px) rotateY(0deg); }
+    100% { transform: translateY(0) rotateY(360deg); }
 }
 
 @keyframes coinSettleTails {
-    0%   { transform: translateY(-16px) rotateY(0deg); }
-    55%  { transform: translateY(-5px) rotateY(1080deg); }
-    82%  { transform: translateY(-2px) rotateY(1540deg); }
-    100% { transform: translateY(0) rotateY(1620deg); }
+    0%   { transform: translateY(-6px) rotateY(0deg); }
+    100% { transform: translateY(0) rotateY(540deg); }
 }
 
 /* Legacy aliases → pure yaw */

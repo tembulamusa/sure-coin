@@ -1,4 +1,10 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, {
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react";
 import HeadsCoin from "../../../assets/surecoin/heads.png";
 import TailsCoin from "../../../assets/surecoin/tails.png";
 import WonGif from "../../../assets/img/casino/notes-falling.gif";
@@ -16,9 +22,58 @@ const normalizeSide = (value) => {
     return side === "heads" || side === "tails" ? side : null;
 };
 
+/** Must match `.sc-coin-mesh.is-spinning` / `coinYawSpin` period in surecoin-shell.css */
+const YAW_SPIN_PERIOD_MS = 8;
+/** Short decelerating land — not a second multi-turn spin from rest */
+const SETTLE_DURATION_MS = 420;
+const SETTLE_SAFETY_MS = SETTLE_DURATION_MS + 100;
+
 /** Perimeter segments approximating the metallic cylinder between faces. */
 const COIN_RIM_SEGMENTS = 24;
 const COIN_RIM_INDEXES = Array.from({ length: COIN_RIM_SEGMENTS }, (_, i) => i);
+
+/** Current yaw (deg) from the live coinYawSpin animation, if present. */
+const readCoinYawDeg = (el) => {
+    if (!el?.getAnimations) return 0;
+    try {
+        const anims = el.getAnimations();
+        for (let i = 0; i < anims.length; i += 1) {
+            const anim = anims[i];
+            const name = anim.animationName || "";
+            if (!name.includes("coinYawSpin") && !name.includes("coinFlipSpin")) {
+                continue;
+            }
+            const t = anim.currentTime;
+            if (typeof t !== "number" || !Number.isFinite(t)) continue;
+            const timed = anim.effect?.getTiming?.()?.duration;
+            const period =
+                typeof timed === "number" && timed > 0 ? timed : YAW_SPIN_PERIOD_MS;
+            const into = ((t % period) + period) % period;
+            return (into / period) * 360;
+        }
+    } catch {
+        /* ignore */
+    }
+    return 0;
+};
+
+/**
+ * Forward-only landing angle: even half-turns → heads, odd → tails.
+ * Adds at least ~300° of coast so the handoff decelerates instead of snapping.
+ */
+const settleTargetYaw = (fromDeg, side) => {
+    const from = Number.isFinite(fromDeg) ? fromDeg : 0;
+    const wantOdd = side === "tails";
+    let halfTurns = Math.ceil(from / 180);
+    if ((halfTurns % 2 === 1) !== wantOdd) {
+        halfTurns += 1;
+    }
+    let target = halfTurns * 180;
+    if (target - from < 300) {
+        target += 360;
+    }
+    return target;
+};
 
 const RotatingCoin = (props) => {
     const {
@@ -34,10 +89,17 @@ const RotatingCoin = (props) => {
     const [spinOutcome, setSpinOutcome] = useState(null);
     const [coinOnDisplay, setCoinOnDisplay] = useState("heads");
     const [isSettling, setIsSettling] = useState(false);
+    /** Keep yaw CSS spin alive after FLIPPING ends until settle can start (avoids dead frame). */
+    const [holdSpin, setHoldSpin] = useState(false);
     const [won, setWon] = useState(null);
     const onOutcomeChangeRef = useRef(onOutcomeChange);
     const wasSpinningRef = useRef(false);
     const previousWinStateRef = useRef(null);
+    const meshRef = useRef(null);
+    const settleFromYawRef = useRef(0);
+    const settleAnimRef = useRef(null);
+
+    const visuallySpinning = (isspinning || holdSpin) && !isSettling;
 
     useEffect(() => {
         onOutcomeChangeRef.current = onOutcomeChange;
@@ -65,9 +127,14 @@ const RotatingCoin = (props) => {
     useEffect(() => {
         if (isspinning) {
             wasSpinningRef.current = true;
+            setHoldSpin(true);
             clearOutcome();
             setWon(null);
             setIsSettling(false);
+            if (settleAnimRef.current) {
+                settleAnimRef.current.cancel();
+                settleAnimRef.current = null;
+            }
             return;
         }
 
@@ -85,10 +152,67 @@ const RotatingCoin = (props) => {
         }
 
         if (wasSpinningRef.current && settledSide) {
+            // Capture yaw while holdSpin still keeps coinYawSpin running this paint.
+            settleFromYawRef.current = readCoinYawDeg(meshRef.current);
             setIsSettling(true);
+            setHoldSpin(false);
             wasSpinningRef.current = false;
+            return;
         }
-    }, [isspinning, roundState.winningSide, roundState.lastResolved]);
+
+        // Outcome late: keep spinning until winningSide arrives; abort on new wait.
+        if (wasSpinningRef.current && !settledSide) {
+            if (roundState.phase === "WAITING" || roundState.phase == null) {
+                setHoldSpin(false);
+                wasSpinningRef.current = false;
+            }
+        }
+    }, [isspinning, roundState.winningSide, roundState.lastResolved, roundState.phase]);
+
+    // Seamless settle: continue from captured yaw (WAAPI). CSS settle-* is fallback only.
+    useLayoutEffect(() => {
+        if (!isSettling || !coinOnDisplay) return undefined;
+        const el = meshRef.current;
+        if (!el || typeof el.animate !== "function") return undefined;
+
+        const from = settleFromYawRef.current;
+        const to = settleTargetYaw(from, coinOnDisplay);
+
+        // Suppress CSS settle keyframes so they don't restart from rotateY(0).
+        // Important beats stylesheet settle; spin !important is already off (no is-spinning).
+        el.style.setProperty("animation", "none", "important");
+
+        settleAnimRef.current?.cancel();
+        const anim = el.animate(
+            [
+                { transform: `translateY(-6px) rotateY(${from}deg)` },
+                { transform: `translateY(0) rotateY(${to}deg)` },
+            ],
+            {
+                duration: SETTLE_DURATION_MS,
+                easing: "cubic-bezier(0.05, 0.8, 0.12, 1)",
+                fill: "forwards",
+            }
+        );
+        settleAnimRef.current = anim;
+
+        const finish = () => {
+            if (settleAnimRef.current === anim) {
+                settleAnimRef.current = null;
+            }
+            setIsSettling(false);
+        };
+        anim.addEventListener("finish", finish);
+
+        return () => {
+            anim.removeEventListener("finish", finish);
+            anim.cancel();
+            if (settleAnimRef.current === anim) {
+                settleAnimRef.current = null;
+            }
+            el.style.removeProperty("animation");
+        };
+    }, [isSettling, coinOnDisplay]);
 
     useEffect(() => {
         const currentWinState = roundState.lastResolved?.win ?? null;
@@ -112,34 +236,45 @@ const RotatingCoin = (props) => {
 
     useEffect(() => {
         if (!isSettling) return undefined;
-        const safety = setTimeout(() => setIsSettling(false), 620);
+        const safety = setTimeout(() => setIsSettling(false), SETTLE_SAFETY_MS);
         return () => clearTimeout(safety);
     }, [isSettling]);
 
     const handleCoinAnimationEnd = (event) => {
+        // CSS settle fallback only (WAAPI path finishes via animation finish event).
+        if (settleAnimRef.current) return;
         const name = event?.animationName || "";
         if (!name.includes("coinSettle")) return;
         setIsSettling(false);
     };
 
     useEffect(() => {
-        if (isspinning || isSettling) return;
+        if (visuallySpinning || isSettling) return;
         const pick = state?.coinselections?.[coinnumber]?.pick;
         if (pick) {
             setCoinOnDisplay(pick);
         }
-    }, [state?.coinselections?.[coinnumber]?.pick, isspinning, isSettling, coinnumber]);
+    }, [state?.coinselections?.[coinnumber]?.pick, visuallySpinning, isSettling, coinnumber]);
 
     useEffect(() => {
         const unlocked = userSoundSet || isSurecoinAudioUnlocked();
 
-        // Explicit mute: hard-off (do not keep spinWanted — coin taps call unlock).
+        // Soft-mute while spinning: keep spinWanted=true (via muted=true) so a
+        // mid-flip unmute/unlock can recreate the BufferSource. Hard-off only
+        // when idle — otherwise unlockSurecoinAudio sees spinWanted=false and
+        // cannot recover audible playback after a suspended context.
         if (usermuted) {
-            setSpinSoundActive(false, true);
+            if (visuallySpinning) {
+                setSpinSoundActive(true, true, { phase: "spin" });
+            } else if (isSettling) {
+                setSpinSoundActive(true, true, { phase: "settle" });
+            } else {
+                setSpinSoundActive(false, true);
+            }
             return undefined;
         }
 
-        if (isspinning) {
+        if (visuallySpinning) {
             // If not unlocked yet, keep spinWanted with muted=true so a later
             // gesture/unlock can start the loop mid-flip.
             setSpinSoundActive(true, !unlocked, { phase: "spin" });
@@ -155,12 +290,16 @@ const RotatingCoin = (props) => {
             setSpinSoundActive(false, false);
         }, 32);
         return () => clearTimeout(stopTimer);
-    }, [isspinning, isSettling, usermuted, userSoundSet]);
+    }, [visuallySpinning, isSettling, usermuted, userSoundSet]);
 
     // If audio unlocks mid-flip (unmute / confirm / pick), force-restart the loop.
     useEffect(() => {
         const onUnlocked = () => {
-            if (usermuted || !isspinning) return;
+            if (!visuallySpinning) return;
+            // usermuted may still be true in this closure for one tick after
+            // enable-sound; unlockSurecoinAudio already restarts when spinWanted.
+            // Force again once unmuted / when the gesture event fires.
+            if (usermuted) return;
             setSpinSoundActive(true, false, {
                 phase: "spin",
                 forceRestart: true,
@@ -169,7 +308,7 @@ const RotatingCoin = (props) => {
         window.addEventListener("surecoin:sound-unlocked", onUnlocked);
         return () =>
             window.removeEventListener("surecoin:sound-unlocked", onUnlocked);
-    }, [isspinning, usermuted]);
+    }, [visuallySpinning, usermuted]);
 
     const handleCoinAreaPointer = () => {
         // User gesture on the coin primes Web Audio so the next/current spin can be heard.
@@ -177,9 +316,10 @@ const RotatingCoin = (props) => {
     };
 
     const faceClass =
-        !isspinning && !isSettling && coinOnDisplay
+        !visuallySpinning && !isSettling && coinOnDisplay
             ? `face-${coinOnDisplay}`
             : "";
+    // settle-* CSS is fallback when WAAPI is unavailable; WAAPI clears animation inline.
     const settleClass =
         isSettling && coinOnDisplay ? `is-settling settle-${coinOnDisplay}` : "";
 
@@ -194,7 +334,7 @@ const RotatingCoin = (props) => {
             onPointerDown={handleCoinAreaPointer}
         >
             <div
-                className={`sc-coin-ground-shadow${isspinning ? " is-spinning" : ""}${isSettling ? " is-settling" : ""}`}
+                className={`sc-coin-ground-shadow${visuallySpinning ? " is-spinning" : ""}${isSettling ? " is-settling" : ""}`}
                 aria-hidden="true"
             />
             <div className="notify-win-container">
@@ -229,7 +369,8 @@ const RotatingCoin = (props) => {
             */}
             <div className="sc-coin-yaw-pivot">
                 <div
-                    className={`rotating-img sc-coin-mesh ${coinSettled ? "coin-settled" : ""} ${isspinning ? "is-spinning" : ""} ${settleClass} ${faceClass}`}
+                    ref={meshRef}
+                    className={`rotating-img sc-coin-mesh ${coinSettled ? "coin-settled" : ""} ${visuallySpinning ? "is-spinning" : ""} ${settleClass} ${faceClass}`}
                     onAnimationEnd={handleCoinAnimationEnd}
                 >
                     <img

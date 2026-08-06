@@ -1042,6 +1042,18 @@ body,
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  /* Soft stage wash — keeps coin area from reading as a flat panel */
+  background:
+    radial-gradient(
+      ellipse 72% 58% at 50% 42%,
+      rgba(255, 193, 7, 0.055) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 100% 90% at 50% 55%,
+      #141210 0%,
+      transparent 70%
+    );
 }
 
 .sc-outcome-panel {
@@ -1141,6 +1153,7 @@ body,
 
 /* Coin canvas — full stage width + leftover height; coin scales/centers inside */
 .sc-coin-canvas {
+  position: relative;
   grid-column: 1;
   min-width: 0;
   min-height: 0;
@@ -1150,12 +1163,31 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Padding gives 3D yaw/perspective room so the lower rim isn't clipped */
+  padding: 10px 8px 18px;
+  box-sizing: border-box;
   overflow: hidden;
   container-type: size;
   container-name: sc-coin;
+  border-radius: 18px;
+  /* Atmospheric vignette — brass/gold accents on dark casino base */
+  background:
+    radial-gradient(
+      ellipse 55% 50% at 50% 46%,
+      rgba(232, 197, 106, 0.1) 0%,
+      rgba(180, 130, 50, 0.04) 38%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 95% 85% at 50% 50%,
+      #1a1712 0%,
+      #12100e 52%,
+      #0c0c0c 100%
+    );
 }
 
 .rotating-images-wrapper {
+  position: relative;
   min-width: 0;
   min-height: 0;
   width: 100%;
@@ -1165,7 +1197,8 @@ body,
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  overflow: hidden;
+  /* Let spinning mesh/rim project into canvas padding without hard clip */
+  overflow: visible;
 }
 
 .rotating-image-container {
@@ -1184,8 +1217,8 @@ body,
   perspective-origin: 50% 42%;
   transform-style: preserve-3d;
   isolation: isolate;
-  /* Size from coin canvas via cq units; no fixed top margin (that blocked shrink) */
-  --sc-coin-size: min(88cqmin, 100%);
+  /* ~13% smaller than prior 88cqmin; leaves room for yaw/perspective overflow */
+  --sc-coin-size: min(76cqmin, 88%);
   width: var(--sc-coin-size);
   height: var(--sc-coin-size);
   max-width: 100%;
@@ -1195,12 +1228,13 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 }
 
 /* Fallback when container query units unavailable */
 @supports not (width: 1cqmin) {
   .sc-coin-stage {
-    --sc-coin-size: clamp(0px, min(28vh, 42vw), 220px);
+    --sc-coin-size: clamp(0px, min(24vh, 36vw), 190px);
     width: var(--sc-coin-size);
     height: var(--sc-coin-size);
   }
@@ -1249,11 +1283,11 @@ body,
 
 .sc-coin-ground-shadow.is-spinning {
   /* Half of coinYawSpin period so shadow pulse tracks face/edge alternation */
-  animation: scCoinShadowSpin 0.03s linear infinite;
+  animation: scCoinShadowSpin 0.004s linear infinite;
 }
 
 .sc-coin-ground-shadow.is-settling {
-  animation: scCoinShadowSettle 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+  animation: scCoinShadowSettle 0.42s cubic-bezier(0.05, 0.8, 0.12, 1) forwards;
 }
 
 .rotating-img,
@@ -1354,8 +1388,8 @@ body,
 }
 
 .sc-coin-mesh.is-spinning {
-  /* ~0.06s/rev — 2× prior 0.12s; faces + rim still readable with thickness */
-  animation: coinYawSpin 0.06s linear infinite !important;
+  /* ~0.008s/rev — ~1.9× prior 0.015s; very fast yaw, faces + rim still readable */
+  animation: coinYawSpin 0.008s linear infinite !important;
 }
 
 .sc-coin-mesh.prep-to-start {
@@ -1363,15 +1397,16 @@ body,
 }
 
 .sc-coin-mesh.is-spinning.prep-to-start {
-  animation: coinYawSpin 0.06s linear infinite !important;
+  animation: coinYawSpin 0.008s linear infinite !important;
 }
 
+/* Fallback when WAAPI settle is unavailable — short decelerate, not a 4-turn restart */
 .sc-coin-mesh.is-settling.settle-heads {
-  animation: coinSettleHeads 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+  animation: coinSettleHeads 0.42s cubic-bezier(0.05, 0.8, 0.12, 1) forwards;
 }
 
 .sc-coin-mesh.is-settling.settle-tails {
-  animation: coinSettleTails 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+  animation: coinSettleTails 0.42s cubic-bezier(0.05, 0.8, 0.12, 1) forwards;
 }
 
 .sc-coin-mesh.face-heads {
@@ -1408,34 +1443,26 @@ body,
   }
 }
 
-/* Even full turns (n×360°) → heads; +180° → tails */
+/*
+ * CSS settle fallback: continue from spin height, ~1 turn ease-out into face.
+ * Primary path is WAAPI in rotating-coin.js (continues from live yaw).
+ * Even full turns → heads; +180° → tails.
+ */
 @keyframes coinSettleHeads {
   0% {
-    transform: translateY(-16px) rotateY(0deg);
-  }
-  55% {
-    transform: translateY(-5px) rotateY(1080deg);
-  }
-  82% {
-    transform: translateY(-2px) rotateY(1360deg);
+    transform: translateY(-6px) rotateY(0deg);
   }
   100% {
-    transform: translateY(0) rotateY(1440deg);
+    transform: translateY(0) rotateY(360deg);
   }
 }
 
 @keyframes coinSettleTails {
   0% {
-    transform: translateY(-16px) rotateY(0deg);
-  }
-  55% {
-    transform: translateY(-5px) rotateY(1080deg);
-  }
-  82% {
-    transform: translateY(-2px) rotateY(1540deg);
+    transform: translateY(-6px) rotateY(0deg);
   }
   100% {
-    transform: translateY(0) rotateY(1620deg);
+    transform: translateY(0) rotateY(540deg);
   }
 }
 
@@ -2442,7 +2469,7 @@ body,
 
   .sc-coin-stage {
     margin-top: 0;
-    --sc-coin-size: min(88cqmin, 100%);
+    --sc-coin-size: min(76cqmin, 88%);
   }
 }
 

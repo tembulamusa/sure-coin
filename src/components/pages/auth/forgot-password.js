@@ -4,6 +4,10 @@ import makeRequest from "../../utils/fetch-request";
 import { useNavigate } from "react-router-dom";
 import Notify from "../../utils/Notify";
 import Alert from "../../utils/alert";
+import {
+  buildSurecoinCredentialsPayload,
+  isValidSurecoinMsisdn,
+} from "../../utils/surecoin-auth-payload";
 
 const ResetPassword = () => {
   const [message, setMessage] = useState(null);
@@ -22,7 +26,7 @@ const ResetPassword = () => {
     makeRequest({
       url: "auth/reset-password",
       method: "POST",
-      data: { msisdn: values.msisdn, password: values.password },
+      data: buildSurecoinCredentialsPayload(values),
       api_version: "sureCoinPublic",
     }).then(([status, response]) => {
       setIsLoading(false);
@@ -44,7 +48,7 @@ const ResetPassword = () => {
 
   const validate = (values) => {
     const errors = {};
-    if (!values.msisdn || !values.msisdn.match(/(254|0|)?[71]\d{8}/g)) {
+    if (!isValidSurecoinMsisdn(values.msisdn)) {
       errors.msisdn = "Please enter a valid phone number";
     }
     if (!values.password || values.password.length < 4) {

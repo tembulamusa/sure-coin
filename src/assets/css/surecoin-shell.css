@@ -1012,41 +1012,58 @@ body,
   opacity: 0.85;
 }
 
-/* Game display — footer (countdown) must stay visible above bet panel */
+/* Game display — vertical flex: coin canvas flexes; footer + bet stay fixed */
 .sc-game-display {
   margin-bottom: 8px;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* Size container so short-height rules can drop labels while keeping the bar */
+  container-type: size;
+  container-name: sc-game;
 }
 
-.bet-control {
+.bet-control,
+.sc-place-bet-block {
+  flex: 0 0 auto;
   flex-shrink: 0;
 }
 
 .sc-game-stage {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: start;
+  /* Single track: outcome/stats overlay so the coin stays true-center.
+   * (auto | 1fr | auto with uneven panel widths shifted the canvas.) */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .sc-outcome-panel {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--sc-border);
+  position: absolute;
+  left: 0;
+  top: 0;
+  align-self: start;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 214, 0, 0.55);
   border-radius: 10px;
-  padding: 8px 10px;
-  min-width: 76px;
-  max-width: 110px;
-  z-index: 2;
+  padding: 8px 12px;
+  min-width: 88px;
+  max-width: 140px;
+  /* Above coin, stats, progress overlays, and short-height layers */
+  z-index: 100000;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
 .sc-outcome-label {
-  color: var(--sc-muted);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   margin-bottom: 4px;
@@ -1055,24 +1072,34 @@ body,
 .sc-outcome-body {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .sc-outcome-coin {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   object-fit: contain;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .sc-outcome-value {
   color: var(--sc-yellow);
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
+  line-height: 1.1;
   text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
 }
 
 .sc-stats-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  align-self: start;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid var(--sc-border);
   border-radius: 10px;
@@ -1080,6 +1107,7 @@ body,
   min-width: 112px;
   max-width: 150px;
   z-index: 2;
+  pointer-events: none;
 }
 
 .sc-stats-row {
@@ -1111,40 +1139,95 @@ body,
   font-weight: 700;
 }
 
-.rotating-images-wrapper {
-  grid-column: 2;
+/* Coin canvas — full stage width + leftover height; coin scales/centers inside */
+.sc-coin-canvas {
+  grid-column: 1;
   min-width: 0;
-  min-height: 200px;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  container-type: size;
+  container-name: sc-coin;
+}
+
+.rotating-images-wrapper {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 18px;
+  overflow: hidden;
 }
 
 .rotating-image-container {
   display: flex;
+  align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
 }
 
 .sc-coin-stage {
   position: relative;
-  perspective: 480px;
-  perspective-origin: 50% 34%;
+  perspective: 560px;
+  perspective-origin: 50% 42%;
   transform-style: preserve-3d;
   isolation: isolate;
-  /* Sit lower in the stage; avoid transform so 3D flip on .sc-coin-mesh stays intact */
-  margin-top: 54px;
-  padding-bottom: 14px;
+  /* Size from coin canvas via cq units; no fixed top margin (that blocked shrink) */
+  --sc-coin-size: min(88cqmin, 100%);
+  width: var(--sc-coin-size);
+  height: var(--sc-coin-size);
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0 auto;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fallback when container query units unavailable */
+@supports not (width: 1cqmin) {
+  .sc-coin-stage {
+    --sc-coin-size: clamp(0px, min(28vh, 42vw), 220px);
+    width: var(--sc-coin-size);
+    height: var(--sc-coin-size);
+  }
+}
+
+/* Spin parent: preserve-3d only — no rotateX (keeps yaw axis world-vertical). */
+.sc-coin-yaw-pivot {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transform-origin: center center;
 }
 
 /* Soft oval ground shadow under the coin (light — not a black plate) */
 .sc-coin-ground-shadow {
   position: absolute;
   left: 50%;
-  bottom: 2px;
+  bottom: 1%;
   z-index: 0;
   width: 48%;
-  max-width: 100px;
-  height: 12px;
+  max-width: none;
+  height: 7%;
+  min-height: 4px;
+  max-height: 14px;
   transform: translateX(-50%) scale(1);
   border-radius: 50%;
   pointer-events: none;
@@ -1165,36 +1248,214 @@ body,
 }
 
 .sc-coin-ground-shadow.is-spinning {
-  animation: scCoinShadowSpin 0.018s linear infinite;
+  /* Half of coinYawSpin period so shadow pulse tracks face/edge alternation */
+  animation: scCoinShadowSpin 0.03s linear infinite;
 }
 
 .sc-coin-ground-shadow.is-settling {
-  animation: scCoinShadowSettle 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+  animation: scCoinShadowSettle 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
 }
 
 .rotating-img,
-.sc-coin-mesh,
-.sc-coin-3d-host {
-  height: clamp(140px, 22vh, 180px);
-  width: clamp(140px, 22vh, 180px);
-  margin: 20px auto 8px;
+.sc-coin-mesh {
+  /* Fill the stage square so the coin tracks canvas height */
+  height: 100%;
+  width: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  margin: 0;
   position: relative;
   z-index: 1;
   background: transparent;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transform-origin: center center;
+  will-change: transform;
+  /* Half-thickness along Z; faces sit at ±this so the rim fills the gap */
+  --sc-coin-half-t: 9px;
+  --sc-coin-rim-n: 24;
+  /* No filter here — filter flattens preserve-3d in some browsers */
 }
 
-.sc-coin-3d-canvas,
-.sc-coin-3d-fallback {
-  display: block;
+.rotating-img .coin-image,
+.sc-coin-mesh .coin-face {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  object-fit: contain;
+  background: transparent !important;
+  background-image: none !important;
+  border-radius: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   user-select: none;
   pointer-events: none;
-  object-fit: contain;
+  box-shadow: none;
+  filter: none;
+}
+
+/*
+ * Two-sided coin along Z: heads +Z, tails −Z (after 180° yaw).
+ * translateZ must match half rim height so edge reads mid-yaw (not paper-thin).
+ * Mesh spins with rotateY only — never rotateX on faces or spin keyframes.
+ */
+.coin-face--heads,
+.coin-image.heads {
+  transform: rotateY(0deg) translateZ(var(--sc-coin-half-t));
+}
+
+.coin-face--tails,
+.coin-image.tails {
+  transform: rotateY(180deg) translateZ(var(--sc-coin-half-t));
+}
+
+/* Metallic cylinder between faces — visible as an edge flash at ~90°/270° yaw */
+.sc-coin-rim {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sc-coin-rim-seg {
+  /* Full-mesh spoke: rotate around coin center, place metal at the rim */
+  position: absolute;
+  inset: 0;
+  transform: rotateZ(calc(var(--rim-i) * 360deg / var(--sc-coin-rim-n)));
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  pointer-events: none;
+  background: transparent;
+}
+
+.sc-coin-rim-face {
+  position: absolute;
+  left: 50%;
+  /* Match circular PNG radius (~48.5% from center → ~1.5% from top) */
+  top: 1.5%;
+  width: calc(100% * 3.2 / var(--sc-coin-rim-n));
+  height: calc(var(--sc-coin-half-t) * 2);
+  transform: translate(-50%, -50%) rotateX(90deg);
+  background: linear-gradient(
+    to bottom,
+    #5c4518 0%,
+    #a67c1f 18%,
+    #e8c76a 48%,
+    #f5e6a8 52%,
+    #c9a227 72%,
+    #6b5420 100%
+  );
+  box-shadow: inset 0 0 1px rgba(255, 230, 150, 0.35);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.sc-coin-mesh.is-spinning {
+  /* ~0.06s/rev — 2× prior 0.12s; faces + rim still readable with thickness */
+  animation: coinYawSpin 0.06s linear infinite !important;
+}
+
+.sc-coin-mesh.prep-to-start {
+  animation: coinYawPrep 0.35s linear infinite;
+}
+
+.sc-coin-mesh.is-spinning.prep-to-start {
+  animation: coinYawSpin 0.06s linear infinite !important;
+}
+
+.sc-coin-mesh.is-settling.settle-heads {
+  animation: coinSettleHeads 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+}
+
+.sc-coin-mesh.is-settling.settle-tails {
+  animation: coinSettleTails 0.55s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
+}
+
+.sc-coin-mesh.face-heads {
+  /* Idle: heads toward camera (even Y turns). No transition = no settle rewind. */
+  transform: translateY(0) rotateY(0deg);
+}
+
+.sc-coin-mesh.face-tails {
+  /* Idle: tails toward camera (odd half-turn of Y). */
+  transform: translateY(0) rotateY(180deg);
+}
+
+/*
+ * Pure yaw about the vertical axis (CSS Y).
+ * Continuous linear rotateY only — no mid-spin translateY bob (that hitch made
+ * the loop feel stepped and biased face-on angles).
+ * At 90°/270° the coin is a VERTICAL edge (horizontal spin), not a tumble.
+ */
+@keyframes coinYawSpin {
+  from {
+    transform: translateY(-6px) rotateY(0deg);
+  }
+  to {
+    transform: translateY(-6px) rotateY(360deg);
+  }
+}
+
+@keyframes coinYawPrep {
+  from {
+    transform: translateY(-2px) rotateY(0deg);
+  }
+  to {
+    transform: translateY(-2px) rotateY(360deg);
+  }
+}
+
+/* Even full turns (n×360°) → heads; +180° → tails */
+@keyframes coinSettleHeads {
+  0% {
+    transform: translateY(-16px) rotateY(0deg);
+  }
+  55% {
+    transform: translateY(-5px) rotateY(1080deg);
+  }
+  82% {
+    transform: translateY(-2px) rotateY(1360deg);
+  }
+  100% {
+    transform: translateY(0) rotateY(1440deg);
+  }
+}
+
+@keyframes coinSettleTails {
+  0% {
+    transform: translateY(-16px) rotateY(0deg);
+  }
+  55% {
+    transform: translateY(-5px) rotateY(1080deg);
+  }
+  82% {
+    transform: translateY(-2px) rotateY(1540deg);
+  }
+  100% {
+    transform: translateY(0) rotateY(1620deg);
+  }
+}
+
+/* Legacy aliases — also pure yaw if anything still references old names */
+@keyframes coinFlipSpin {
+  from {
+    transform: translateY(-6px) rotateY(0deg);
+  }
+  to {
+    transform: translateY(-6px) rotateY(360deg);
+  }
+}
+
+@keyframes coinPrepSpin {
+  from {
+    transform: translateY(-2px) rotateY(0deg);
+  }
+  to {
+    transform: translateY(-2px) rotateY(360deg);
+  }
 }
 
 /* Ground shadow breathes with flip — narrower/fainter when coin is edge-on */
@@ -1241,6 +1502,7 @@ body,
 .sc-game-footer {
   margin-top: 2px;
   text-align: center;
+  flex: 0 0 auto;
   flex-shrink: 0;
   /* Stable block: title + subtitle + timer — avoids column height jumps */
   min-height: 4.75rem;
@@ -1282,6 +1544,13 @@ body,
   display: none;
 }
 
+/* Progress row — bar always reserved; label may collapse on short heights */
+.sc-progress-row {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  min-height: 5px;
+}
+
 .sc-countdown,
 .sc-game-footer .bets-timer-empty-holder {
   margin-top: 2px;
@@ -1289,7 +1558,8 @@ body,
   box-sizing: border-box;
 }
 
-.sc-countdown .time-left {
+.sc-countdown .time-left,
+.sc-countdown-label {
   color: var(--sc-yellow);
   font-weight: 700;
   text-transform: uppercase;
@@ -1303,6 +1573,7 @@ body,
   background: rgba(255, 255, 255, 0.18);
   border-radius: 4px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .sc-countdown-fill {
@@ -1320,12 +1591,204 @@ body,
   height: 34px;
 }
 
+/*
+ * Short-height outcome: overlay the stage so HEADS/TAILS never shrinks with the coin.
+ * Stays in-flow on tall layouts; pins top-left with fixed type when height collapses.
+ */
+@container sc-game (max-height: 420px) {
+  .sc-game-stage {
+    /* Let the outcome banner paint fully even if the coin column is tiny */
+    overflow: visible;
+  }
+
+  .sc-outcome-panel {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    right: auto;
+    bottom: auto;
+    z-index: 100000;
+    max-width: none;
+    min-width: 0;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.88);
+    border-color: rgba(255, 214, 0, 0.75);
+  }
+
+  .sc-outcome-label {
+    font-size: 0.65rem;
+    margin-bottom: 2px;
+  }
+
+  .sc-outcome-coin {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .sc-outcome-value {
+    font-size: 1.35rem;
+  }
+}
+
+@container sc-game (max-height: 280px) {
+  .sc-outcome-panel {
+    left: 2px;
+    top: 2px;
+    padding: 5px 9px;
+  }
+
+  .sc-outcome-coin {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  .sc-outcome-value {
+    font-size: 1.25rem;
+  }
+}
+
+/*
+ * Height-responsive collapse: hide supporting copy first, keep the progress track.
+ * Uses game-display container height (accounts for header/bet panel), with vh fallback.
+ */
+@container sc-game (max-height: 360px) {
+  .sc-director-sub {
+    display: none;
+  }
+
+  .sc-director {
+    height: auto;
+    min-height: 0;
+  }
+
+  .sc-game-footer {
+    min-height: 0;
+  }
+}
+
+@container sc-game (max-height: 280px) {
+  .sc-director {
+    display: none;
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+@container sc-game (max-height: 200px) {
+  .sc-countdown .time-left,
+  .sc-countdown-label {
+    display: none;
+    margin: 0;
+    height: 0;
+    overflow: hidden;
+  }
+
+  .sc-countdown,
+  .sc-game-footer .bets-timer-empty-holder {
+    height: auto;
+    min-height: 5px;
+    margin-top: 0;
+  }
+}
+
+@media screen and (max-height: 640px) {
+  .sc-director-sub {
+    display: none;
+  }
+
+  .sc-director {
+    height: auto;
+    min-height: 0;
+  }
+
+  .sc-game-footer {
+    min-height: 0;
+  }
+}
+
+/* vh fallback when container queries aren't driving short-height outcome */
+@media screen and (max-height: 640px) {
+  .sc-game-stage {
+    overflow: visible;
+  }
+
+  .sc-outcome-panel {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    right: auto;
+    bottom: auto;
+    z-index: 100000;
+    max-width: none;
+    min-width: 0;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.88);
+    border-color: rgba(255, 214, 0, 0.75);
+  }
+
+  .sc-outcome-label {
+    font-size: 0.65rem;
+    margin-bottom: 2px;
+  }
+
+  .sc-outcome-coin {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .sc-outcome-value {
+    font-size: 1.35rem;
+  }
+}
+
+@media screen and (max-height: 520px) {
+  .sc-director {
+    display: none;
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .sc-trust-footer {
+    display: none;
+  }
+}
+
+@media screen and (max-height: 420px) {
+  .sc-countdown .time-left,
+  .sc-countdown-label {
+    display: none;
+    margin: 0;
+    height: 0;
+    overflow: hidden;
+  }
+
+  .sc-countdown,
+  .sc-game-footer .bets-timer-empty-holder {
+    height: auto;
+    min-height: 5px;
+    margin-top: 0;
+  }
+
+  .sc-outcome-value {
+    font-size: 1.25rem;
+  }
+}
+
 /* Betting panel — charcoal shell; lifted input/auto surfaces (not inverted dark) */
 .sc-bet-panel {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--sc-border);
   border-radius: 10px;
   padding: 8px;
+  flex: 0 0 auto;
   flex-shrink: 0;
   min-width: 0;
 }
@@ -1770,6 +2233,31 @@ body,
   color: var(--sc-green);
 }
 
+.sc-confirm-btn.pending-next {
+  background: rgba(255, 193, 7, 0.12);
+  border-color: var(--sc-yellow);
+  color: var(--sc-yellow);
+  cursor: pointer;
+}
+
+.sc-confirm-btn.pending-next:disabled {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.sc-next-round-hint {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 193, 7, 0.45);
+  background: rgba(255, 193, 7, 0.08);
+  color: var(--sc-yellow);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 .btn-place-surecoin-bet {
   display: none;
 }
@@ -1917,19 +2405,23 @@ body,
 
   .sc-game-stage {
     grid-template-columns: 1fr;
-    min-height: 240px;
+    min-height: 0;
   }
 
   .sc-outcome-panel,
   .sc-stats-panel {
     position: absolute;
-    z-index: 4;
     max-width: none;
   }
 
   .sc-outcome-panel {
-    left: 0;
-    top: 0;
+    left: 4px;
+    top: 4px;
+    z-index: 100000;
+  }
+
+  .sc-stats-panel {
+    z-index: 4;
   }
 
   .sc-stats-panel {
@@ -1937,13 +2429,20 @@ body,
     top: 0;
   }
 
-  .rotating-images-wrapper {
+  .sc-coin-canvas {
     grid-column: 1;
+    /* Stacked layout has height:auto — give canvas a definite size for cqmin */
+    min-height: min(42vw, 220px);
+    height: min(42vw, 220px);
+  }
+
+  .rotating-images-wrapper {
     padding-top: 12px;
   }
 
   .sc-coin-stage {
-    margin-top: 28px;
+    margin-top: 0;
+    --sc-coin-size: min(88cqmin, 100%);
   }
 }
 
@@ -1960,17 +2459,16 @@ body,
   }
 
   .rotating-img,
-  .sc-coin-mesh,
-  .sc-coin-3d-host {
-    width: 150px;
-    height: 150px;
-    margin-bottom: 16px;
+  .sc-coin-mesh {
+    width: 100%;
+    height: 100%;
+    margin: 0;
   }
 
   .sc-coin-ground-shadow {
-    max-width: 88px;
-    height: 10px;
-    bottom: 4px;
+    max-width: 55%;
+    height: 8%;
+    bottom: 2%;
   }
 
   .sc-bet-panel-top {

@@ -20,8 +20,6 @@ const ROUND_EVENTS = [
   "round:flip_start",
   "round:flip_tick",
   "round:result",
-  "round:bet",
-  "round:bets_settled",
 ];
 
 const BET_EVENTS = ["bet:accepted", "bet:rejected", "bet:resolved"];
@@ -70,6 +68,21 @@ const useSurecoinSocket = () => {
     },
     [appDispatch, appState?.iscoinrotating]
   );
+
+  const refreshBalance = useCallback(async () => {
+    const user = getFromLocalStorage("user");
+    if (!user?.token) return;
+
+    const [balanceStatus, balance] = await makeRequest({
+      url: "balance",
+      method: "GET",
+      api_version: "sureCoin",
+    });
+
+    if (balanceStatus === 200 && balance) {
+      applyBalanceUpdate(balance.cash, balance.bonus);
+    }
+  }, [applyBalanceUpdate]);
 
   const handleRoundPayload = useCallback(
     (eventName, payload) => {
@@ -131,18 +144,8 @@ const useSurecoinSocket = () => {
       });
     }
 
-    const user = getFromLocalStorage("user");
-    if (user?.token) {
-      const [balanceStatus, balance] = await makeRequest({
-        url: "balance",
-        method: "GET",
-        api_version: "sureCoin",
-      });
-      if (balanceStatus === 200 && balance) {
-        applyBalanceUpdate(balance.cash, balance.bonus);
-      }
-    }
-  }, [roundDispatch, applyBalanceUpdate]);
+    await refreshBalance();
+  }, [roundDispatch, refreshBalance]);
 
   const fetchCurrentBets = useCallback(async () => {
     const [status, result] = await makeRequest({
@@ -210,7 +213,9 @@ const useSurecoinSocket = () => {
       roundDispatch({ type: "SET_CONNECTED", payload: false });
     };
 
-    const onConnectError = () => {};
+    const onConnectError = () => {
+      roundDispatch({ type: "SET_CONNECTED", payload: false });
+    };
 
     const lastTickMsRef = { current: 0 };
     const onRoundEvent = (eventName, payload) => {
@@ -224,8 +229,15 @@ const useSurecoinSocket = () => {
       handleRoundPayload(eventName, payload);
     };
 
+    const roundEventHandlers = Object.fromEntries(
+      ROUND_EVENTS.map((eventName) => [
+        eventName,
+        (payload) => onRoundEvent(eventName, payload),
+      ])
+    );
+
     ROUND_EVENTS.forEach((eventName) => {
-      socket.on(eventName, (payload) => onRoundEvent(eventName, payload));
+      socket.on(eventName, roundEventHandlers[eventName]);
     });
 
     socket.on("round:bet", (payload) => {
@@ -277,14 +289,11 @@ const useSurecoinSocket = () => {
         payload: {
           betId: payload.bet_id,
           roundId: payload.round_id,
-          win: payload.win,
-          winningSide: payload.winning_side,
+          win: payload.won,
           payout: payload.payout,
         },
       });
-      if (payload.balance) {
-        applyBalanceUpdate(payload.balance.cash, payload.balance.bonus);
-      }
+      refreshBalance();
     });
 
     socket.on("connect", onConnect);
@@ -297,7 +306,7 @@ const useSurecoinSocket = () => {
 
     return () => {
       ROUND_EVENTS.forEach((eventName) => {
-        socket.off(eventName);
+        socket.off(eventName, roundEventHandlers[eventName]);
       });
       BET_EVENTS.forEach((eventName) => {
         socket.off(eventName);
@@ -307,6 +316,7 @@ const useSurecoinSocket = () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
+      disconnectSurecoinSocket();
     };
   }, [
     appState?.user?.profile_id,
@@ -318,6 +328,7 @@ const useSurecoinSocket = () => {
     fetchConfig,
     fetchCurrentBets,
     fetchLeaderboard,
+    refreshBalance,
   ]);
 
   return { placeBet, fetchLeaderboard, roundState, autoBetRef };

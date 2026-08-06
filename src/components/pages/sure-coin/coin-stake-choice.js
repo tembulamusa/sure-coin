@@ -7,6 +7,12 @@ import {
 } from "../../utils/surecoin-socket-connect";
 import { unlockSurecoinAudio } from "../../utils/surecoin-sound";
 import { getFromLocalStorage, setLocalStorage } from "../../utils/local-storage";
+import {
+  canConfirmPick,
+  canSelectSide,
+  createPendingBet,
+  shouldQueueForNextRound,
+} from "../../utils/surecoin-pending-bet";
 import { FaCheck, FaCheckCircle } from "react-icons/fa";
 import { CgAdd, CgRemove } from "react-icons/cg";
 import { GiTwoCoins } from "react-icons/gi";
@@ -33,7 +39,7 @@ const ScToggle = ({ checked, onChange, label }) => (
 const CoinStakeChoice = (props) => {
     const { coinnumber, isspinning, isDocumentVisible, isOnline } = props;
     const [state, dispatch] = useContext(Context);
-    const { canPlaceBet, canPickSide, state: roundState } = useSureCoinRound();
+    const { canPlaceBet, state: roundState } = useSureCoinRound();
     const [amount, setAmount] = useState(5);
     const [inputErrors, setInputErrors] = useState({});
     const [defaultAmountChange] = useState(10);
@@ -42,6 +48,9 @@ const CoinStakeChoice = (props) => {
     const [autoBetsLeft, setAutoBetsLeft] = useState(DEFAULT_AUTO_ROUNDS);
     const [userPlaceBetOn, setUserPlaceBetOn] = useState(false);
     const [autoPick, setAutoPick] = useState(false);
+    const [pendingBet, setPendingBet] = useState(null);
+    const pendingBetRef = useRef(null);
+    const placedForRoundRef = useRef(null);
     const autoBetPendingRef = useRef(false);
 
     const minimumBetAmount = roundState.config?.minBetAmount ?? 5;
@@ -49,6 +58,8 @@ const CoinStakeChoice = (props) => {
     const user = state?.user || getFromLocalStorage("user");
     const hasConfirmedBet = Boolean(roundState.myBet);
     const confirmed = userPlaceBetOn && hasConfirmedBet;
+    const hasNextRoundQueue = Boolean(pendingBet);
+    const phase = roundState.phase;
 
     const setcanplayTheitems = () => {
         const itemtoplay = `canplayitems-${coinnumber}`;
@@ -92,21 +103,36 @@ const CoinStakeChoice = (props) => {
         }
     }, [autoBetsLeft, autoBet]);
 
+    useEffect(() => {
+        pendingBetRef.current = pendingBet;
+    }, [pendingBet]);
+
     const coinsideAutopick = () => {
         const choices = ["heads", "tails"];
         setPickedBtn(choices[Math.floor(Math.random() * 2)]);
     };
 
+    const currentRoundKey = () => roundState.roundId ?? roundState.roundNumber ?? null;
+
     const emitBet = (pick, stake) => {
-        if (!user?.profile_id || !pick) return;
+        if (!user?.profile_id || !pick) return false;
+
+        const roundKey = currentRoundKey();
+        if (roundKey != null && placedForRoundRef.current === roundKey) {
+            return false;
+        }
 
         const socket = getSurecoinSocket();
         if (!socket.connected) {
             connectSurecoinSocket();
         }
 
-        const sessionId = `${user.profile_id}:${roundState.roundId ?? roundState.roundNumber}`;
-        const idempotencyKey = `${user.profile_id}-${roundState.roundId ?? "round"}-${Date.now()}`;
+        const sessionId = `${user.profile_id}:${roundKey ?? "round"}`;
+        const idempotencyKey = `${user.profile_id}-${roundKey ?? "round"}-${Date.now()}`;
+
+        if (roundKey != null) {
+            placedForRoundRef.current = roundKey;
+        }
 
         socket.emit("bet:place", {
             coin_side: String(pick).toUpperCase(),
@@ -114,58 +140,196 @@ const CoinStakeChoice = (props) => {
             session_id: sessionId,
             idempotency_key: idempotencyKey,
         });
+        return true;
     };
 
-    const placeConfirmedBet = (pick = pickedBtn, stake = amount) => {
-        if (!pick) {
+    const clearPendingBet = () => {
+        pendingBetRef.current = null;
+        setPendingBet(null);
+    };
+
+    const queuePendingBet = (pick, stake, message) => {
+        const next = createPendingBet(pick, stake);
+        pendingBetRef.current = next;
+        setPendingBet(next);
+        setPickedBtn(String(pick).toLowerCase());
+        setUserPlaceBetOn(true);
+        dispatch({
+            type: "SET",
+            key: "coinsAlertMsg",
+            payload: {
+                status: 200,
+                message:
+                    message ||
+                    `Pick queued for next round (${String(pick).toUpperCase()}, KES ${stake})`,
+            },
+        });
+    };
+
+    const promptLogin = () => {
+        dispatch({
+            type: "SET",
+            key: "coinsAlertMsg",
+            payload: { status: 400, message: "Please login to place a bet" },
+        });
+        dispatch({ type: "SET", key: "authModalMode", payload: "login" });
+        dispatch({ type: "SET", key: "showloginmodal", payload: true });
+    };
+
+    const placeConfirmedBet = async (pick = pickedBtn, stake = amount, { fromAuto = false } = {}) => {
+        const side = pick || state?.coinselections?.[coinnumber]?.pick;
+        if (!side) {
             setInputErrors({ ...inputErrors, userPick: "unpicked button" });
             return;
         }
-        if (!canPlaceBet || !user?.profile_id || !isOnline || !isDocumentVisible) {
+
+        if (!user?.profile_id) {
+            promptLogin();
             return;
         }
+
+        if (!isOnline || !isDocumentVisible) {
+            queuePendingBet(
+                side,
+                stake,
+                !isOnline
+                    ? `Offline — queued for next round (${String(side).toUpperCase()}, KES ${stake})`
+                    : `Tab hidden — queued for next round (${String(side).toUpperCase()}, KES ${stake})`
+            );
+            return;
+        }
+
+        await unlockSurecoinAudio();
+
+        if (shouldQueueForNextRound({ canPlaceBet, isOnline, isDocumentVisible })) {
+            queuePendingBet(side, stake);
+            return;
+        }
+
         setUserPlaceBetOn(true);
-        emitBet(pick, stake);
+        clearPendingBet();
+        const placed = emitBet(side, stake);
+        if (placed && fromAuto) {
+            setAutoBetsLeft((prev) => prev - 1);
+        }
     };
 
+    // Flush next-round queue when WAITING / canPlaceBet opens.
     useEffect(() => {
-        if (isspinning) {
-            setPickedBtn(null);
-            setUserPlaceBetOn(false);
+        const queued = pendingBetRef.current;
+        if (!queued || !canPlaceBet || !user?.profile_id) return;
+        if (!isOnline || !isDocumentVisible) return;
+        if (hasConfirmedBet) {
+            clearPendingBet();
             return;
         }
 
-        if (autoBet && autoBetsLeft > 0 && canPlaceBet && !hasConfirmedBet) {
-            const timer = setTimeout(() => {
-                let side = pickedBtn;
-                if (!side && autoPick) {
-                    const choices = ["heads", "tails"];
-                    side = choices[Math.floor(Math.random() * 2)];
-                    setPickedBtn(side);
-                }
-                if (side) {
-                    placeConfirmedBet(side, amount);
-                    setAutoBetsLeft((prev) => prev - 1);
-                }
-            }, 800);
-            return () => clearTimeout(timer);
+        const roundKey = currentRoundKey();
+        if (roundKey != null && placedForRoundRef.current === roundKey) {
+            clearPendingBet();
+            return;
         }
-        return undefined;
+
+        const side = queued.pick;
+        const stake = Math.max(queued.amount, minimumBetAmount);
+        setPickedBtn(side);
+        setAmount(stake);
+        setUserPlaceBetOn(true);
+        clearPendingBet();
+        const placed = emitBet(side, stake);
+
+        if (placed && autoBet && autoBetsLeft > 0) {
+            setAutoBetsLeft((prev) => prev - 1);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- flush once per open window
+    }, [
+        canPlaceBet,
+        hasConfirmedBet,
+        roundState.roundId,
+        isOnline,
+        isDocumentVisible,
+        user?.profile_id,
+    ]);
+
+    // Auto-bet for current WAITING window (skips if a next-round queue is pending/flushing).
+    useEffect(() => {
+        if (pendingBetRef.current) return;
+        if (autoBetPendingRef.current) return;
+        if (!autoBet || autoBetsLeft <= 0 || !canPlaceBet || hasConfirmedBet) return;
+        if (!user?.profile_id || !isOnline || !isDocumentVisible) return;
+
+        const roundKey = currentRoundKey();
+        if (roundKey != null && placedForRoundRef.current === roundKey) return;
+
+        autoBetPendingRef.current = true;
+        const timer = setTimeout(() => {
+            autoBetPendingRef.current = false;
+            if (pendingBetRef.current || !canPlaceBet || hasConfirmedBet) return;
+            if (roundKey != null && placedForRoundRef.current === roundKey) return;
+
+            let side = pickedBtn;
+            if (!side && autoPick) {
+                const choices = ["heads", "tails"];
+                side = choices[Math.floor(Math.random() * 2)];
+                setPickedBtn(side);
+            }
+            if (side) {
+                placeConfirmedBet(side, amount, { fromAuto: true });
+            }
+        }, 800);
+
+        return () => {
+            autoBetPendingRef.current = false;
+            clearTimeout(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roundState.roundId, canPlaceBet, hasConfirmedBet, autoBet, autoBetsLeft, isspinning]);
 
     useEffect(() => {
         if (roundState.phase === "WAITING" && roundState.myBet) {
             setUserPlaceBetOn(true);
             setPickedBtn(String(roundState.myBet.coinSide).toLowerCase());
+            clearPendingBet();
+            return;
         }
         if (roundState.phase === "WAITING" && !roundState.myBet) {
-            setUserPlaceBetOn(false);
+            const roundKey = currentRoundKey();
+            const placedThisRound =
+                roundKey != null && placedForRoundRef.current === roundKey;
+            if (!pendingBetRef.current && !placedThisRound) {
+                setUserPlaceBetOn(false);
+            }
         }
     }, [roundState.phase, roundState.myBet, roundState.roundId]);
+
+    // On bet rejection, allow re-confirm / clear stale pending.
+    useEffect(() => {
+        const alert = state?.coinsAlertMsg;
+        if (!alert || alert.status === 200) return;
+        // Login prompt is not a bet failure — leave any next-round queue intact.
+        if (/please login/i.test(String(alert.message || ""))) return;
+        setUserPlaceBetOn(false);
+        clearPendingBet();
+        placedForRoundRef.current = null;
+    }, [state?.coinsAlertMsg]);
 
     const pickClick = async (pick) => {
         await unlockSurecoinAudio();
         setPickedBtn(pick);
+        setInputErrors((prev) => {
+            if (!prev?.userPick) return prev;
+            const next = { ...prev };
+            delete next.userPick;
+            return next;
+        });
+        // If already queued for next round, update the queued side.
+        if (pendingBetRef.current) {
+            const stake = pendingBetRef.current.amount || amount;
+            const next = createPendingBet(pick, stake);
+            pendingBetRef.current = next;
+            setPendingBet(next);
+            setUserPlaceBetOn(true);
+        }
     };
 
     useEffect(() => {
@@ -192,10 +356,20 @@ const CoinStakeChoice = (props) => {
                     pick: pickedBtn,
                     amount,
                     userbeton: userPlaceBetOn,
+                    pendingNextRound: Boolean(pendingBet),
                 },
             },
         });
-    }, [amount, pickedBtn, userPlaceBetOn, coinnumber, dispatch, state?.coinselections]);
+    }, [amount, pickedBtn, userPlaceBetOn, pendingBet, coinnumber, dispatch, state?.coinselections]);
+
+    // Keep queued stake in sync when amount changes while pending.
+    useEffect(() => {
+        if (!pendingBetRef.current || !pickedBtn) return;
+        if (Number(pendingBetRef.current.amount) === Number(amount)) return;
+        const next = createPendingBet(pickedBtn, amount);
+        pendingBetRef.current = next;
+        setPendingBet(next);
+    }, [amount, pickedBtn]);
 
     const autoBetToggle = () => {
         if (!autoBet) {
@@ -244,6 +418,22 @@ const CoinStakeChoice = (props) => {
     }, [state?.promptdepositrequest]);
 
     const hasPick = pickedBtn || state?.coinselections?.[coinnumber]?.pick;
+    const sideLocked =
+        !canSelectSide({ phase, myBet: roundState.myBet }) ||
+        (phase === "WAITING" && hasConfirmedBet);
+    const confirmDisabled =
+        !canConfirmPick({ hasPick, phase, myBet: roundState.myBet }) ||
+        (phase === "WAITING" && confirmed);
+
+    let confirmLabel = "CONFIRM PICK";
+    let confirmClass = "";
+    if (confirmed && phase === "WAITING") {
+        confirmLabel = "CONFIRMED";
+        confirmClass = "confirmed";
+    } else if (hasNextRoundQueue) {
+        confirmLabel = "NEXT ROUND";
+        confirmClass = "pending-next";
+    }
 
     return (
         <div className="sc-bet-panel" onClick={() => setcanplayTheitems()}>
@@ -341,12 +531,19 @@ const CoinStakeChoice = (props) => {
                 </div>
             </div>
 
+            {hasNextRoundQueue && (
+                <div className="sc-next-round-hint" role="status">
+                    Queued for next round — {String(pendingBet.pick).toUpperCase()} · KES{" "}
+                    {pendingBet.amount}
+                </div>
+            )}
+
             <div className={`sc-bet-actions ${inputErrors?.userPick ? "pick-errors" : ""}`}>
                 <button
                     type="button"
                     className={`sc-side-btn ${pickedBtn === "heads" ? "selected" : ""}`}
                     onClick={() => pickClick("heads")}
-                    disabled={hasConfirmedBet || !canPickSide}
+                    disabled={sideLocked}
                 >
                     <img src={HeadsCoin} alt="" className="sc-side-coin" />
                     HEADS
@@ -356,7 +553,7 @@ const CoinStakeChoice = (props) => {
                     type="button"
                     className={`sc-side-btn ${pickedBtn === "tails" ? "selected" : ""}`}
                     onClick={() => pickClick("tails")}
-                    disabled={hasConfirmedBet || !canPickSide}
+                    disabled={sideLocked}
                 >
                     <img src={TailsCoin} alt="" className="sc-side-coin" />
                     TAILS
@@ -364,14 +561,12 @@ const CoinStakeChoice = (props) => {
                 </button>
                 <button
                     type="button"
-                    disabled={!hasPick || confirmed || !canPlaceBet || !user?.profile_id}
-                    className={`sc-confirm-btn ${!hasPick ? "disabled" : ""} ${
-                        confirmed ? "confirmed" : ""
-                    }`}
+                    disabled={confirmDisabled}
+                    className={`sc-confirm-btn ${!hasPick ? "disabled" : ""} ${confirmClass}`}
                     onClick={() => placeConfirmedBet()}
                 >
                     <FaCheckCircle />
-                    {confirmed ? "CONFIRMED" : "CONFIRM PICK"}
+                    {confirmLabel}
                 </button>
             </div>
         </div>

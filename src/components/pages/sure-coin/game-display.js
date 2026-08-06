@@ -25,21 +25,24 @@ const GameDisplay = ({
       <div className="sc-game-stage">
         <OutcomePanel outcome={lastOutcome} />
 
-        <div className="rotating-images-wrapper coin-sections relative">
-          {Array(userCoinCount)
-            .fill(1)
-            .map((_, idx) => (
-              <div className="rotating-image-container" key={`coin-${idx}`}>
-                <RotatingCoin
-                  coinnumber={idx + 1}
-                  isspinning={isSpinning}
-                  usermuted={userMuted}
-                  userSoundSet={userSoundSet}
-                  coinSettled={coinSettled}
-                  onOutcomeChange={onOutcomeChange}
-                />
-              </div>
-            ))}
+        {/* Flex absorber: shrinks/grows with viewport; coin scales inside */}
+        <div className="sc-coin-canvas">
+          <div className="rotating-images-wrapper coin-sections relative">
+            {Array(userCoinCount)
+              .fill(1)
+              .map((_, idx) => (
+                <div className="rotating-image-container" key={`coin-${idx}`}>
+                  <RotatingCoin
+                    coinnumber={idx + 1}
+                    isspinning={isSpinning}
+                    usermuted={userMuted}
+                    userSoundSet={userSoundSet}
+                    coinSettled={coinSettled}
+                    onOutcomeChange={onOutcomeChange}
+                  />
+                </div>
+              ))}
+          </div>
         </div>
 
         <RoundStatsPanel startRound={roundStats?.round} roundStats={roundStats} />
@@ -55,11 +58,13 @@ const GameDisplay = ({
           </div>
         </div>
 
-        {isWaiting && isOnline && isDocumentVisible ? (
-          <TakeBetsTimer />
-        ) : (
-          <div className="bets-timer-empty-holder" aria-hidden="true" />
-        )}
+        <div className="sc-progress-row">
+          {isWaiting && isOnline && isDocumentVisible ? (
+            <TakeBetsTimer />
+          ) : (
+            <div className="bets-timer-empty-holder" aria-hidden="true" />
+          )}
+        </div>
       </div>
     </div>
   );

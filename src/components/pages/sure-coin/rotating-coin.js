@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import HeadsCoin from "../../../assets/surecoin/heads.png";
+import TailsCoin from "../../../assets/surecoin/tails.png";
 import WonGif from "../../../assets/img/casino/notes-falling.gif";
 import { Context } from "../../../context/store";
 import { useSureCoinRound } from "../../../context/surecoin-round";
@@ -6,13 +8,17 @@ import {
     isSurecoinAudioUnlocked,
     playWinSound,
     setSpinSoundActive,
+    unlockSurecoinAudio,
 } from "../../utils/surecoin-sound";
-import { SureCoin3D } from "./coin-3d";
 
 const normalizeSide = (value) => {
     const side = String(value || "").trim().toLowerCase();
     return side === "heads" || side === "tails" ? side : null;
 };
+
+/** Perimeter segments approximating the metallic cylinder between faces. */
+const COIN_RIM_SEGMENTS = 24;
+const COIN_RIM_INDEXES = Array.from({ length: COIN_RIM_SEGMENTS }, (_, i) => i);
 
 const RotatingCoin = (props) => {
     const {
@@ -31,6 +37,7 @@ const RotatingCoin = (props) => {
     const [won, setWon] = useState(null);
     const onOutcomeChangeRef = useRef(onOutcomeChange);
     const wasSpinningRef = useRef(false);
+    const previousWinStateRef = useRef(null);
 
     useEffect(() => {
         onOutcomeChangeRef.current = onOutcomeChange;
@@ -66,9 +73,6 @@ const RotatingCoin = (props) => {
 
         if (roundState.lastResolved?.win === true) {
             setWon("won");
-            if (!usermuted && (userSoundSet || isSurecoinAudioUnlocked())) {
-                playWinSound(usermuted);
-            }
         } else if (roundState.lastResolved?.win === false) {
             setWon("lost");
         } else {
@@ -84,13 +88,19 @@ const RotatingCoin = (props) => {
             setIsSettling(true);
             wasSpinningRef.current = false;
         }
-    }, [
-        isspinning,
-        roundState.winningSide,
-        roundState.lastResolved,
-        usermuted,
-        userSoundSet,
-    ]);
+    }, [isspinning, roundState.winningSide, roundState.lastResolved]);
+
+    useEffect(() => {
+        const currentWinState = roundState.lastResolved?.win ?? null;
+        const wonNow = currentWinState === true;
+        const hadWonBefore = previousWinStateRef.current === true;
+
+        if (wonNow && !hadWonBefore && !usermuted && (userSoundSet || isSurecoinAudioUnlocked())) {
+            playWinSound(usermuted);
+        }
+
+        previousWinStateRef.current = currentWinState;
+    }, [roundState.lastResolved?.win, usermuted, userSoundSet]);
 
     useEffect(() => {
         if (won === "won" || won === "lost") {
@@ -102,9 +112,15 @@ const RotatingCoin = (props) => {
 
     useEffect(() => {
         if (!isSettling) return undefined;
-        const safety = setTimeout(() => setIsSettling(false), 580);
+        const safety = setTimeout(() => setIsSettling(false), 620);
         return () => clearTimeout(safety);
     }, [isSettling]);
+
+    const handleCoinAnimationEnd = (event) => {
+        const name = event?.animationName || "";
+        if (!name.includes("coinSettle")) return;
+        setIsSettling(false);
+    };
 
     useEffect(() => {
         if (isspinning || isSettling) return;
@@ -115,36 +131,68 @@ const RotatingCoin = (props) => {
     }, [state?.coinselections?.[coinnumber]?.pick, isspinning, isSettling, coinnumber]);
 
     useEffect(() => {
-        const soundEnabled =
-            !usermuted && (userSoundSet || isSurecoinAudioUnlocked());
-        if (!soundEnabled) {
+        const unlocked = userSoundSet || isSurecoinAudioUnlocked();
+
+        // Explicit mute: hard-off (do not keep spinWanted — coin taps call unlock).
+        if (usermuted) {
             setSpinSoundActive(false, true);
             return undefined;
         }
+
         if (isspinning) {
-            setSpinSoundActive(true, usermuted, { phase: "spin" });
+            // If not unlocked yet, keep spinWanted with muted=true so a later
+            // gesture/unlock can start the loop mid-flip.
+            setSpinSoundActive(true, !unlocked, { phase: "spin" });
             return undefined;
         }
         if (isSettling) {
-            setSpinSoundActive(true, usermuted, { phase: "settle" });
+            setSpinSoundActive(true, !unlocked, { phase: "settle" });
             return undefined;
         }
-        // Defer stop one macrotask so settle state from the same tick can win
+        // Hard stop only when truly idle (not the brief gap before isSettling).
+        // Short defer so the settle path from the same spin-end tick wins.
         const stopTimer = setTimeout(() => {
-            setSpinSoundActive(false, usermuted);
-        }, 0);
+            setSpinSoundActive(false, false);
+        }, 32);
         return () => clearTimeout(stopTimer);
     }, [isspinning, isSettling, usermuted, userSoundSet]);
+
+    // If audio unlocks mid-flip (unmute / confirm / pick), force-restart the loop.
+    useEffect(() => {
+        const onUnlocked = () => {
+            if (usermuted || !isspinning) return;
+            setSpinSoundActive(true, false, {
+                phase: "spin",
+                forceRestart: true,
+            });
+        };
+        window.addEventListener("surecoin:sound-unlocked", onUnlocked);
+        return () =>
+            window.removeEventListener("surecoin:sound-unlocked", onUnlocked);
+    }, [isspinning, usermuted]);
+
+    const handleCoinAreaPointer = () => {
+        // User gesture on the coin primes Web Audio so the next/current spin can be heard.
+        unlockSurecoinAudio();
+    };
+
+    const faceClass =
+        !isspinning && !isSettling && coinOnDisplay
+            ? `face-${coinOnDisplay}`
+            : "";
+    const settleClass =
+        isSettling && coinOnDisplay ? `is-settling settle-${coinOnDisplay}` : "";
 
     const payout =
         roundState.lastResolved?.payout ??
         roundState.myBet?.possibleWin ??
         state?.coinselections?.[coinnumber]?.amount * 2;
 
-    const visualSide = normalizeSide(coinOnDisplay) || normalizeSide(spinOutcome) || "heads";
-
     return (
-        <div className="relative sc-coin-stage">
+        <div
+            className="relative sc-coin-stage"
+            onPointerDown={handleCoinAreaPointer}
+        >
             <div
                 className={`sc-coin-ground-shadow${isspinning ? " is-spinning" : ""}${isSettling ? " is-settling" : ""}`}
                 aria-hidden="true"
@@ -175,15 +223,39 @@ const RotatingCoin = (props) => {
                     </span>
                 </div>
             </div>
-            <div
-                className={`rotating-img sc-coin-mesh sc-coin-3d-host ${coinSettled ? "coin-settled" : ""}`}
-            >
-                <SureCoin3D
-                    spinning={!!isspinning}
-                    outcomeSide={spinOutcome}
-                    displaySide={visualSide}
-                    onSettleComplete={() => setIsSettling(false)}
-                />
+            {/*
+              Pivot holds static view only (no animated rotateX).
+              Mesh spins purely with rotateY about the vertical axis.
+            */}
+            <div className="sc-coin-yaw-pivot">
+                <div
+                    className={`rotating-img sc-coin-mesh ${coinSettled ? "coin-settled" : ""} ${isspinning ? "is-spinning" : ""} ${settleClass} ${faceClass}`}
+                    onAnimationEnd={handleCoinAnimationEnd}
+                >
+                    <img
+                        src={HeadsCoin}
+                        alt="Heads"
+                        className="coin-image coin-face coin-face--heads"
+                        draggable={false}
+                    />
+                    <div className="sc-coin-rim" aria-hidden="true">
+                        {COIN_RIM_INDEXES.map((i) => (
+                            <span
+                                key={i}
+                                className="sc-coin-rim-seg"
+                                style={{ "--rim-i": i }}
+                            >
+                                <span className="sc-coin-rim-face" />
+                            </span>
+                        ))}
+                    </div>
+                    <img
+                        src={TailsCoin}
+                        alt="Tails"
+                        className="coin-image coin-face coin-face--tails"
+                        draggable={false}
+                    />
+                </div>
             </div>
 
             {won === "won" && (

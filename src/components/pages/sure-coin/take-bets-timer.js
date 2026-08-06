@@ -60,13 +60,13 @@ const TakeBetsTimer = () => {
 
   return (
     <div className="sc-countdown">
-      <div className="time-left">
+      <div className="time-left sc-countdown-label">
         <span className="text">STARTS IN </span>
         <span className="counter" ref={displaySecondsRef}>
           {secondsRemaining}
         </span>
       </div>
-      <div className="sc-countdown-track">
+      <div className="sc-countdown-track" role="progressbar" aria-valuemin={0} aria-valuemax={waitSeconds}>
         <div
           ref={fillRef}
           className="sc-countdown-fill"

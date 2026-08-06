@@ -11,6 +11,10 @@ import Notify from '../utils/Notify';
 import { Link } from 'react-router-dom';
 import { FaRegEye, FaRegEyeSlash  } from "react-icons/fa";
 import { getFromLocalStorage, setLocalStorage } from '../utils/local-storage';
+import {
+    buildSurecoinSignupPayload,
+    isValidSurecoinMsisdn,
+} from "../utils/surecoin-auth-payload";
 
 const Signup = (props) => {
     const [isLoading, setIsLoading] = useState(false)
@@ -25,20 +29,15 @@ const Signup = (props) => {
 
     const initialValues = {
         msisdn: '',
+        displayName: '',
         password: '',
         password2: '',
-        created_by:"web"
+        promo_code: '',
     }
 
     const handleSubmit = values => {
         setIsLoading(true);
-        const data = {
-            msisdn: values.msisdn,
-            password: values.password,
-            ...(values.displayName?.trim()
-                ? { displayName: values.displayName.trim() }
-                : {}),
-        };
+        const data = buildSurecoinSignupPayload(values);
 
         makeRequest({
             url: "auth/signup",
@@ -69,7 +68,7 @@ const Signup = (props) => {
 
         let errors = {}
 
-        if (!values.msisdn || !values.msisdn.match(/(254|0|)?[71]\d{8}/g)) {
+        if (!isValidSurecoinMsisdn(values.msisdn)) {
             errors.msisdn = 'Please enter a valid phone number'
         }
 

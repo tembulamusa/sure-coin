@@ -7,6 +7,10 @@ import { getFromLocalStorage, setLocalStorage } from "../utils/local-storage";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Alert from "../utils/alert";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import {
+  buildSurecoinCredentialsPayload,
+  isValidSurecoinMsisdn,
+} from "../utils/surecoin-auth-payload";
 
 const BodyLogin = (props) => {
   const { setUser } = props;
@@ -71,7 +75,7 @@ const BodyLogin = (props) => {
     makeRequest({
       url: "auth/login",
       method: "POST",
-      data: values,
+      data: buildSurecoinCredentialsPayload(values),
       api_version: "sureCoinPublic",
     }).then(([status, response]) => {
       if (status == 200 || status == 201 || status == 204) {
@@ -102,7 +106,7 @@ const BodyLogin = (props) => {
 
   const validate = (values) => {
     const errors = {};
-    if (!values.msisdn || !values.msisdn.match(/(254|0|)?[71]\d{8}/g)) {
+    if (!isValidSurecoinMsisdn(values.msisdn)) {
       errors.msisdn = "Invalid phone number";
     }
     if (!values.password || values.password.length < 4) {

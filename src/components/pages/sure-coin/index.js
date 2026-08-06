@@ -10,6 +10,7 @@ import CoinStakeChoice from "./coin-stake-choice";
 import TrustFooter from "./trust-footer";
 import {
     isSurecoinAudioUnlocked,
+    preloadSurecoinSpinSound,
     unlockSurecoinAudio,
 } from "../../utils/surecoin-sound";
 
@@ -17,14 +18,17 @@ const SureCoinIndex = () => {
     const [state, dispatch] = useContext(Context);
     const { roundStats, isSpinning, state: roundState } = useSureCoinRound();
     const [userCoinCount] = useState(1);
-    const [userMuted, setUserMuted] = useState(false);
+    const [userMuted, setUserMuted] = useState(
+        () => !isSurecoinAudioUnlocked()
+    );
     const [coinsAlertMsg, setCoinsAlertMsg] = useState(null);
     const [isOnline, setIsOnline] = useState(true);
     const [networkBackOnCount, setNetworkBackOnCount] = useState(0);
     const [isDocumentVisible, setIsDocumentVisible] = useState(!document.hidden);
-  const isLocalSim = process.env.REACT_APP_LOCAL_SIM === "true";
-  const [userSoundSet, setUserSoundSet] = useState(
-    () => isLocalSim || isSurecoinAudioUnlocked()
+  // Only treat sound as ready after a real unlock (gesture or prior session).
+  // Forcing true in local sim previously skipped unlock and silenced spin SFX.
+  const [userSoundSet, setUserSoundSet] = useState(() =>
+    isSurecoinAudioUnlocked()
   );
     const [coinSettled, setCoinSettled] = useState(true);
     const [lastOutcome, setLastOutcome] = useState(null);
@@ -42,6 +46,11 @@ const SureCoinIndex = () => {
     useEffect(() => {
         dispatch({ type: "SET", key: "iscoinrotating", payload: isSpinning });
     }, [dispatch, isSpinning]);
+
+    // Decode spin buffer on shell mount so the first flip is not waiting on fetch.
+    useEffect(() => {
+        preloadSurecoinSpinSound();
+    }, []);
 
     useEffect(() => {
         if (roundState.winningSide) {
@@ -130,10 +139,30 @@ const SureCoinIndex = () => {
             window.removeEventListener("surecoin:sound-unlocked", onUnlocked);
     }, []);
 
+    // Browsers keep AudioContext suspended across reloads even if we stored an
+    // "unlocked" flag — resume on the first pointer/key gesture in the game shell.
+    useEffect(() => {
+        if (userMuted) return undefined;
+        const prime = () => {
+            unlockSurecoinAudio().then((ok) => {
+                if (ok) setUserSoundSet(true);
+            });
+        };
+        window.addEventListener("pointerdown", prime, {
+            once: true,
+            capture: true,
+        });
+        window.addEventListener("keydown", prime, { once: true, capture: true });
+        return () => {
+            window.removeEventListener("pointerdown", prime, true);
+            window.removeEventListener("keydown", prime, true);
+        };
+    }, [userMuted]);
+
     return (
         <div className="launched-sure-coin">
             <div className="surecoin-body">
-                {!isLocalSim && userSoundSet === false && (
+                {userSoundSet === false && (
                     <SoundInteractPrompt
                         setUserSoundSet={setUserSoundSet}
                         setUserMuted={setUserMuted}
@@ -172,7 +201,7 @@ const SureCoinIndex = () => {
                                 onOutcomeChange={handleOutcomeChange}
                             />
 
-                            <div className="bet-control">
+                            <div className="bet-control sc-place-bet-block">
                                 {Array(userCoinCount)
                                     .fill(1)
                                     .map((_, idx) => (

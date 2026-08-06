@@ -1,6 +1,4 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import HeadsCoin from "../../../assets/surecoin/heads.png";
-import TailsCoin from "../../../assets/surecoin/tails.png";
 import WonGif from "../../../assets/img/casino/notes-falling.gif";
 import { Context } from "../../../context/store";
 import { useSureCoinRound } from "../../../context/surecoin-round";
@@ -9,6 +7,7 @@ import {
     playWinSound,
     setSpinSoundActive,
 } from "../../utils/surecoin-sound";
+import { SureCoin3D } from "./coin-3d";
 
 const normalizeSide = (value) => {
     const side = String(value || "").trim().toLowerCase();
@@ -26,7 +25,6 @@ const RotatingCoin = (props) => {
     } = props;
     const [state] = useContext(Context);
     const { state: roundState } = useSureCoinRound();
-    const [rotatingSpeedLevel, setRotatingSpeedLevel] = useState("low");
     const [spinOutcome, setSpinOutcome] = useState(null);
     const [coinOnDisplay, setCoinOnDisplay] = useState("heads");
     const [isSettling, setIsSettling] = useState(false);
@@ -63,9 +61,6 @@ const RotatingCoin = (props) => {
             clearOutcome();
             setWon(null);
             setIsSettling(false);
-            if (roundState.flipProgress >= 75) {
-                setRotatingSpeedLevel("finishing");
-            }
             return;
         }
 
@@ -93,7 +88,6 @@ const RotatingCoin = (props) => {
         isspinning,
         roundState.winningSide,
         roundState.lastResolved,
-        roundState.flipProgress,
         usermuted,
         userSoundSet,
     ]);
@@ -112,12 +106,6 @@ const RotatingCoin = (props) => {
         return () => clearTimeout(safety);
     }, [isSettling]);
 
-    const handleCoinAnimationEnd = (event) => {
-        const name = event?.animationName || "";
-        if (!name.includes("coinSettle")) return;
-        setIsSettling(false);
-    };
-
     useEffect(() => {
         if (isspinning || isSettling) return;
         const pick = state?.coinselections?.[coinnumber]?.pick;
@@ -131,22 +119,29 @@ const RotatingCoin = (props) => {
             !usermuted && (userSoundSet || isSurecoinAudioUnlocked());
         if (!soundEnabled) {
             setSpinSoundActive(false, true);
-            return;
+            return undefined;
         }
-        setSpinSoundActive(isspinning, usermuted);
-    }, [isspinning, usermuted, userSoundSet, roundState.phase, isSettling, rotatingSpeedLevel, roundState.flipProgress]);
-
-    const faceClass =
-        !isspinning && !isSettling && coinOnDisplay
-            ? `face-${coinOnDisplay}`
-            : "";
-    const settleClass =
-        isSettling && coinOnDisplay ? `is-settling settle-${coinOnDisplay}` : "";
+        if (isspinning) {
+            setSpinSoundActive(true, usermuted, { phase: "spin" });
+            return undefined;
+        }
+        if (isSettling) {
+            setSpinSoundActive(true, usermuted, { phase: "settle" });
+            return undefined;
+        }
+        // Defer stop one macrotask so settle state from the same tick can win
+        const stopTimer = setTimeout(() => {
+            setSpinSoundActive(false, usermuted);
+        }, 0);
+        return () => clearTimeout(stopTimer);
+    }, [isspinning, isSettling, usermuted, userSoundSet]);
 
     const payout =
         roundState.lastResolved?.payout ??
         roundState.myBet?.possibleWin ??
         state?.coinselections?.[coinnumber]?.amount * 2;
+
+    const visualSide = normalizeSide(coinOnDisplay) || normalizeSide(spinOutcome) || "heads";
 
     return (
         <div className="relative sc-coin-stage">
@@ -181,20 +176,13 @@ const RotatingCoin = (props) => {
                 </div>
             </div>
             <div
-                className={`rotating-img sc-coin-mesh ${coinSettled ? "coin-settled" : ""} ${isspinning ? "is-spinning" : ""} ${settleClass} ${faceClass} rotating-speed-level-${rotatingSpeedLevel}`}
-                onAnimationEnd={handleCoinAnimationEnd}
+                className={`rotating-img sc-coin-mesh sc-coin-3d-host ${coinSettled ? "coin-settled" : ""}`}
             >
-                <img
-                    src={HeadsCoin}
-                    alt="Heads"
-                    className="coin-image coin-face coin-face--heads"
-                    draggable={false}
-                />
-                <img
-                    src={TailsCoin}
-                    alt="Tails"
-                    className="coin-image coin-face coin-face--tails"
-                    draggable={false}
+                <SureCoin3D
+                    spinning={!!isspinning}
+                    outcomeSide={spinOutcome}
+                    displaySide={visualSide}
+                    onSettleComplete={() => setIsSettling(false)}
                 />
             </div>
 

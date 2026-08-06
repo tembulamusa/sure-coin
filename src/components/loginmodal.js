@@ -3,10 +3,13 @@ import { Modal } from "react-bootstrap";
 import { Context } from "../context/store"
 import "../App.css";
 import BodyLogin from './auth/body-login';
+import BodyRegister from './auth/body-register';
 import SureCoinLogoImg from "../assets/surecoin/logo.png";
 
 const LoginModal = () => {
     const [state, dispatch] = useContext(Context);
+    const mode = state?.authModalMode === "register" ? "register" : "login";
+    const isOpen = state?.showloginmodal == true;
 
     const setUser = (user) => {
         if (user) {
@@ -17,12 +20,13 @@ const LoginModal = () => {
 
     const closeModal = () => {
         dispatch({type:"SET", key:"showloginmodal", payload:false});
+        dispatch({type:"DEL", key:"authModalMode"});
     };
 
     return (
         <Modal
             animation={false}
-            show={state?.showloginmodal == true}
+            show={isOpen}
             onHide={closeModal}
             dialogClassName="popover-login-modal sc-login-modal"
             contentClassName="sc-login-modal__content"
@@ -36,11 +40,15 @@ const LoginModal = () => {
                         alt="Surecoin"
                         className="sc-login-modal__logo"
                     />
-                    <span>Login to Surecoin</span>
+                    <span>{mode === "register" ? "Register for Surecoin" : "Login to Surecoin"}</span>
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body className="sc-login-modal__body p-0">
-                <BodyLogin setUser={setUser} key={state?.showloginmodal ? "open" : "closed"} />
+                {mode === "register" ? (
+                    <BodyRegister setUser={setUser} key={isOpen ? "reg-open" : "reg-closed"} />
+                ) : (
+                    <BodyLogin setUser={setUser} key={isOpen ? "login-open" : "login-closed"} />
+                )}
             </Modal.Body>
         </Modal>
     )

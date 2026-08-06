@@ -35,7 +35,9 @@ const Signup = (props) => {
         const data = {
             msisdn: values.msisdn,
             password: values.password,
-            display_name: values.display_name || undefined,
+            ...(values.displayName?.trim()
+                ? { displayName: values.displayName.trim() }
+                : {}),
         };
 
         makeRequest({

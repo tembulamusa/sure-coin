@@ -169,29 +169,32 @@ const CoinStakeChoice = (props) => {
     };
 
     useEffect(() => {
-        if (amount) {
-            setLocalStorage("userDefaultCoinAmount", amount, 1000 * 60 * 60 * 2);
-            dispatch({
-                type: "SET",
-                key: "coinselections",
-                payload: state?.coinselections
-                    ? {
-                          ...state.coinselections,
-                          [coinnumber]: {
-                              pick: pickedBtn,
-                              amount,
-                              userbeton: userPlaceBetOn,
-                          },
-                      }
-                    : {
-                          [coinnumber]: {
-                              pick: pickedBtn,
-                              amount,
-                              userbeton: userPlaceBetOn,
-                          },
-                      },
-            });
+        if (!amount) return;
+
+        setLocalStorage("userDefaultCoinAmount", amount, 1000 * 60 * 60 * 2);
+
+        const existing = state?.coinselections?.[coinnumber];
+        if (
+            existing &&
+            existing.pick === pickedBtn &&
+            existing.amount === amount &&
+            existing.userbeton === userPlaceBetOn
+        ) {
+            return;
         }
+
+        dispatch({
+            type: "SET",
+            key: "coinselections",
+            payload: {
+                ...(state?.coinselections || {}),
+                [coinnumber]: {
+                    pick: pickedBtn,
+                    amount,
+                    userbeton: userPlaceBetOn,
+                },
+            },
+        });
     }, [amount, pickedBtn, userPlaceBetOn, coinnumber, dispatch, state?.coinselections]);
 
     const autoBetToggle = () => {

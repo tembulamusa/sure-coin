@@ -121,6 +121,53 @@ body,
   gap: 14px;
 }
 
+.sc-auth-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-auth-btn {
+  appearance: none;
+  border: 1px solid var(--sc-border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.sc-auth-btn--ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sc-text);
+}
+
+.sc-auth-btn--ghost:hover {
+  border-color: var(--sc-yellow);
+  color: var(--sc-yellow);
+}
+
+.sc-auth-btn--primary {
+  background: var(--sc-yellow);
+  border-color: var(--sc-yellow);
+  color: #111;
+}
+
+.sc-auth-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.sc-login-optional {
+  font-weight: 500;
+  opacity: 0.65;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .sc-balance {
   display: flex;
   align-items: baseline;
@@ -154,6 +201,404 @@ body,
 .sc-sound-btn:hover {
   border-color: var(--sc-yellow);
   color: var(--sc-yellow);
+}
+
+/* My Account header trigger */
+.sc-account-trigger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--sc-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sc-text);
+  cursor: pointer;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.sc-account-trigger:hover {
+  border-color: var(--sc-yellow);
+  color: var(--sc-yellow);
+}
+
+.sc-account-trigger__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sc-yellow);
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.sc-account-trigger__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Account drawer (BetMundial-style, Surecoin gold accents) */
+.sc-acct-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  justify-content: flex-end;
+  animation: sc-acct-fade-in 0.18s ease;
+}
+
+@keyframes sc-acct-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sc-acct-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.sc-acct-drawer {
+  width: min(380px, 88vw);
+  max-width: 100%;
+  height: 100%;
+  background: #12151c;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  animation: sc-acct-slide-in 0.22s ease;
+  overflow: hidden;
+}
+
+.sc-acct-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 12px;
+  flex-shrink: 0;
+}
+
+.sc-acct-drawer__head-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sc-acct-drawer__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sc-acct-drawer__subtitle {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: #9aa3b2;
+  line-height: 1.3;
+}
+
+.sc-acct-close {
+  appearance: none;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-size: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sc-acct-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sc-yellow);
+}
+
+.sc-acct-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 14px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sc-acct-avatar {
+  border-radius: 50%;
+  background: var(--sc-yellow);
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sc-acct-avatar--sm {
+  width: 40px;
+  height: 40px;
+  font-size: 0.95rem;
+}
+
+.sc-acct-avatar--lg {
+  width: 52px;
+  height: 52px;
+  font-size: 1.25rem;
+}
+
+.sc-acct-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 2px 16px;
+}
+
+.sc-acct-user__phone {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.sc-acct-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #1e2430;
+  color: #e8ecf4;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.sc-acct-verified svg {
+  color: var(--sc-yellow);
+  font-size: 0.7rem;
+}
+
+.sc-acct-wallet {
+  background: #1a1f2a;
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sc-acct-wallet__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #c5cad6;
+  margin-bottom: 10px;
+}
+
+.sc-acct-wallet__label svg {
+  color: var(--sc-yellow);
+}
+
+.sc-acct-wallet__grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.sc-acct-wallet__caption {
+  display: block;
+  font-size: 0.72rem;
+  color: #8b93a5;
+  margin-bottom: 4px;
+}
+
+.sc-acct-wallet__amount {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--sc-yellow);
+  line-height: 1.15;
+}
+
+.sc-acct-wallet__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.sc-acct-wallet__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sc-acct-wallet__side-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #8b93a5;
+}
+
+.sc-acct-wallet__side-label svg {
+  color: var(--sc-yellow);
+  font-size: 0.72rem;
+}
+
+.sc-acct-wallet__side-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--sc-yellow);
+  padding-left: 18px;
+}
+
+.sc-acct-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.sc-acct-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.sc-acct-btn--deposit {
+  border: none;
+  background: var(--sc-yellow);
+  color: #111;
+}
+
+.sc-acct-btn--deposit:hover {
+  filter: brightness(1.06);
+}
+
+.sc-acct-btn--deposit svg {
+  color: #8a5a00;
+  font-size: 1.1rem;
+}
+
+.sc-acct-btn--withdraw {
+  background: transparent;
+  border: 1.5px solid var(--sc-yellow);
+  color: var(--sc-yellow);
+}
+
+.sc-acct-btn--withdraw:hover {
+  background: rgba(255, 193, 7, 0.08);
+}
+
+.sc-acct-btn--withdraw svg {
+  font-size: 1.15rem;
+}
+
+.sc-acct-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8b93a5;
+  margin: 4px 2px 8px;
+}
+
+.sc-acct-list {
+  background: #1a1f2a;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.sc-acct-row {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.sc-acct-row:last-child {
+  border-bottom: none;
+}
+
+.sc-acct-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sc-acct-row__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 193, 7, 0.14);
+  color: var(--sc-yellow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.sc-acct-row__label {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-acct-row__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--sc-yellow);
+  color: #111;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sc-acct-row__chevron {
+  color: #6b7385;
+  font-size: 1.25rem;
+  flex-shrink: 0;
 }
 
 /* Layout — fills remaining iframe height under header; equal-height columns.
@@ -728,100 +1173,28 @@ body,
 }
 
 .rotating-img,
-.sc-coin-mesh {
+.sc-coin-mesh,
+.sc-coin-3d-host {
   height: clamp(140px, 22vh, 180px);
   width: clamp(140px, 22vh, 180px);
   margin: 20px auto 8px;
   position: relative;
   z-index: 1;
   background: transparent;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  will-change: transform;
-  /* No filter here — filter flattens preserve-3d in some browsers */
 }
 
-.rotating-img .coin-image,
-.sc-coin-mesh .coin-face {
-  position: absolute;
-  inset: 0;
+.sc-coin-3d-canvas,
+.sc-coin-3d-fallback {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  background: transparent !important;
-  background-image: none !important;
-  border-radius: 0;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   user-select: none;
   pointer-events: none;
-  /* PNG art only — no rim disc / dark halo behind the coin */
-  box-shadow: none;
-  filter: none;
-}
-
-/* True coin mesh: heads on front, tails on reverse — slight Z for thickness */
-.coin-face--heads,
-.coin-image.heads {
-  transform: rotateY(0deg) translateZ(3px);
-}
-
-.coin-face--tails,
-.coin-image.tails {
-  transform: rotateY(180deg) translateZ(3px);
-}
-
-.sc-coin-mesh.is-spinning {
-  animation: coinFlipSpin 0.02s linear infinite !important;
-}
-
-.sc-coin-mesh.prep-to-start {
-  animation: coinPrepSpin 0.35s linear infinite;
-}
-
-.sc-coin-mesh.is-spinning.prep-to-start {
-  animation: coinFlipSpin 0.02s linear infinite !important;
-}
-
-.sc-coin-mesh.is-settling.settle-heads {
-  animation: coinSettleHeads 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
-}
-
-.sc-coin-mesh.is-settling.settle-tails {
-  animation: coinSettleTails 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
-}
-
-.sc-coin-mesh.face-heads {
-  transform: rotateY(0deg) rotateX(0deg);
-  transition: transform 0.35s ease-out;
-}
-
-.sc-coin-mesh.face-tails {
-  transform: rotateY(180deg) rotateX(0deg);
-  transition: transform 0.35s ease-out;
-}
-
-@keyframes coinFlipSpin {
-  0%   { transform: rotateY(0deg) rotateX(14deg); }
-  25%  { transform: rotateY(90deg) rotateX(-10deg); }
-  50%  { transform: rotateY(180deg) rotateX(14deg); }
-  75%  { transform: rotateY(270deg) rotateX(-10deg); }
-  100% { transform: rotateY(360deg) rotateX(14deg); }
-}
-
-@keyframes coinPrepSpin {
-  0%   { transform: rotateY(0deg) rotateX(6deg); }
-  100% { transform: rotateY(360deg) rotateX(6deg); }
-}
-
-@keyframes coinSettleHeads {
-  0%   { transform: rotateY(0deg) rotateX(16deg); }
-  100% { transform: rotateY(1440deg) rotateX(0deg); }
-}
-
-@keyframes coinSettleTails {
-  0%   { transform: rotateY(0deg) rotateX(16deg); }
-  100% { transform: rotateY(1620deg) rotateX(0deg); }
+  object-fit: contain;
 }
 
 /* Ground shadow breathes with flip — narrower/fainter when coin is edge-on */
@@ -934,9 +1307,13 @@ body,
 
 .sc-countdown-fill {
   height: 100%;
+  width: 100%;
   background: var(--sc-yellow);
   border-radius: 4px;
-  transition: width 0.05s linear;
+  transform-origin: left center;
+  transform: scaleX(1);
+  will-change: transform;
+  transition: none;
 }
 
 .bets-timer-empty-holder {
@@ -1583,7 +1960,8 @@ body,
   }
 
   .rotating-img,
-  .sc-coin-mesh {
+  .sc-coin-mesh,
+  .sc-coin-3d-host {
     width: 150px;
     height: 150px;
     margin-bottom: 16px;
@@ -1618,6 +1996,36 @@ body,
 
   .sc-balance {
     font-size: 0.82rem;
+  }
+
+  .sc-auth-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .sc-header-actions {
+    gap: 8px;
+  }
+
+  .sc-auth-links {
+    gap: 6px;
+  }
+
+  .sc-account-trigger {
+    padding: 4px;
+    gap: 0;
+  }
+
+  .sc-account-trigger__label {
+    display: none;
+  }
+
+  .sc-acct-drawer {
+    width: 88vw;
+  }
+
+  .sc-acct-wallet__grid {
+    grid-template-columns: 1fr;
   }
 
   .sc-bets-tab {

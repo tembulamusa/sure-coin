@@ -20,8 +20,8 @@
 }
 
 .rotating-img,
-.sc-coin-mesh {
-    /* width: auto; */
+.sc-coin-mesh,
+.sc-coin-3d-host {
     height: 150px;
     padding: 0%;
     width: 150px;
@@ -30,40 +30,23 @@
     margin-bottom: 50px;
     margin-top: 50px;
     background: transparent;
-    transform-style: preserve-3d;
-    -webkit-transform-style: preserve-3d;
 }
 
-.rotating-img .coin-image,
-.sc-coin-mesh .coin-face {
-    position: absolute;
-    inset: 0;
+.sc-coin-3d-canvas,
+.sc-coin-3d-fallback {
+    display: block;
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    background: transparent !important;
-    background-image: none !important;
-    border-radius: 0;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     user-select: none;
     pointer-events: none;
-    box-shadow: none;
-}
-
-/* Opposite faces of a 3D coin: heads front, tails back */
-.coin-face--heads,
-.coin-image.heads {
-    transform: rotateY(0deg) translateZ(1px);
-}
-
-.coin-face--tails,
-.coin-image.tails {
-    transform: rotateY(180deg) translateZ(1px);
+    object-fit: contain;
 }
 
 .higher-z {
-    /* Kept for legacy; 3D faces no longer rely on z-index */
     z-index: 1;
 }
 .user-choice {
@@ -72,77 +55,6 @@
 
 .user-choice.tails {
     color: #bb0243;
-}
-
-.rotating-img.is-spinning,
-.sc-coin-mesh.is-spinning {
-    animation: coinFlipSpin 0.018s linear infinite;
-}
-
-.rotating-img.prep-to-start,
-.sc-coin-mesh.prep-to-start {
-    animation: coinPrepSpin 0.35s linear infinite;
-}
-
-.rotating-img.is-settling.settle-heads,
-.sc-coin-mesh.is-settling.settle-heads {
-    animation: coinSettleHeads 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
-}
-
-.rotating-img.is-settling.settle-tails,
-.sc-coin-mesh.is-settling.settle-tails {
-    animation: coinSettleTails 0.45s cubic-bezier(0.12, 0.75, 0.18, 1) forwards;
-}
-
-.rotating-img.face-heads,
-.sc-coin-mesh.face-heads {
-    /* No transition: avoids visual rewind when leaving settle keyframes */
-    transform: rotateY(0deg) rotateX(0deg);
-}
-
-.rotating-img.face-tails,
-.sc-coin-mesh.face-tails {
-    transform: rotateY(180deg) rotateX(0deg);
-}
-
-.coin-settled {
-    /* perspective: 500px; */
-    /* transform: rotateX(60deg); */
-}
-
-/* Continuous tumble: both faces alternate via rotateY + slight rotateX wobble */
-@keyframes coinFlipSpin {
-    0%   { transform: rotateY(0deg) rotateX(14deg); }
-    25%  { transform: rotateY(90deg) rotateX(-10deg); }
-    50%  { transform: rotateY(180deg) rotateX(14deg); }
-    75%  { transform: rotateY(270deg) rotateX(-10deg); }
-    100% { transform: rotateY(360deg) rotateX(14deg); }
-}
-
-@keyframes coinPrepSpin {
-    0%   { transform: rotateY(0deg) rotateX(6deg); }
-    100% { transform: rotateY(360deg) rotateX(6deg); }
-}
-
-/* Even half-turns (n*360) land on heads; odd (n*360+180) land on tails */
-@keyframes coinSettleHeads {
-    0%   { transform: rotateY(0deg) rotateX(16deg); }
-    100% { transform: rotateY(1440deg) rotateX(0deg); }
-}
-
-@keyframes coinSettleTails {
-    0%   { transform: rotateY(0deg) rotateX(16deg); }
-    100% { transform: rotateY(1620deg) rotateX(0deg); }
-}
-
-/* Legacy aliases (unused once shell styles load) */
-@keyframes prepToStart {
-    0%   { transform: rotateY(20deg) rotateX(6deg); }
-    100% { transform: rotateY(360deg) rotateX(6deg); }
-}
-@keyframes rotation {
-    0%   { transform: rotateY(0deg) rotateX(14deg); }
-    100% { transform: rotateY(360deg) rotateX(14deg); }
 }
 
   .sure-coin-header {

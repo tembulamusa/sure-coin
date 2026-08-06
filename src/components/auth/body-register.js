@@ -1,63 +1,48 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useContext, useCallback, useEffect } from "react";
 import Row from "react-bootstrap/Row";
 import { Formik, Form } from "formik";
 import makeRequest from "../utils/fetch-request";
 import { Context } from "../../context/store";
 import { getFromLocalStorage, setLocalStorage } from "../utils/local-storage";
-import { Link, useLocation, useNavigate } from "react-router-dom";
 import Alert from "../utils/alert";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
-const BodyLogin = (props) => {
+const BodyRegister = (props) => {
   const { setUser } = props;
-  const [isLoading, setIsLoading] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [generalErrorMessage, setGeneralErrorMessage] = useState(null);
   const [state, dispatch] = useContext(Context);
   const [user, setLocalUser] = useState(() => getFromLocalStorage("user"));
-  const [alertVerifyMessage, setAlertVerifyMessage] = useState(null);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const navigateAwayRoutes = ["/login", "/signup"];
 
   const initialValues = {
     msisdn: "",
+    displayName: "",
     password: "",
+    password2: "",
   };
 
-  // Re-sync when modal opens or context user is cleared (e.g. socket session expired)
   useEffect(() => {
     if (state?.showloginmodal == true) {
       setLocalUser(getFromLocalStorage("user"));
     }
-  }, [state?.showloginmodal, state?.user, state?.sessionMessage]);
+  }, [state?.showloginmodal, state?.user]);
 
   const Notify = useCallback(
-    (loginMessage) => {
-      if (![200, 201, 204].includes(loginMessage.status)) return;
+    (signupMessage) => {
+      if (![200, 201, 204].includes(signupMessage.status)) return;
 
-      // Persist login without session TTL / expiry
-      setLocalStorage("user", loginMessage.user);
-      setLocalUser(loginMessage.user);
+      setLocalStorage("user", signupMessage.user);
+      setLocalUser(signupMessage.user);
 
       if (state?.showloginmodal == true && typeof setUser === "function") {
-        setUser(loginMessage.user);
+        setUser(signupMessage.user);
       }
       dispatch({ type: "DEL", key: "showloginmodal" });
       dispatch({ type: "DEL", key: "authModalMode" });
       dispatch({ type: "DEL", key: "sessionMessage" });
-
-      if (navigateAwayRoutes.includes(location.pathname)) {
-        const queryParams = new URLSearchParams(location.search);
-        const next = queryParams.get("next") || "/";
-        if (typeof navigate === "function") {
-          navigate(next);
-        } else {
-          window.location.href = next;
-        }
-      }
     },
-    [dispatch, location.pathname, location.search, navigate, setUser, state?.showloginmodal]
+    [dispatch, setUser, state?.showloginmodal]
   );
 
   useEffect(() => {
@@ -68,33 +53,49 @@ const BodyLogin = (props) => {
 
   const handleSubmit = (values) => {
     setIsLoading(true);
+    setGeneralErrorMessage(null);
+
+    const data = {
+      msisdn: values.msisdn.trim(),
+      password: values.password,
+    };
+    if (values.displayName?.trim()) {
+      data.displayName = values.displayName.trim();
+    }
+
     makeRequest({
-      url: "auth/login",
+      url: "auth/signup",
       method: "POST",
-      data: values,
+      data,
       api_version: "sureCoinPublic",
     }).then(([status, response]) => {
-      if (status == 200 || status == 201 || status == 204) {
-        if (response.status == 200 || response.status == 201) {
-          setMessage({ user: response?.data, status: 200 });
-        } else if (response?.result == "User account not verified") {
-          dispatch({ type: "SET", key: "regmsisdn", payload: values.msisdn });
-          setAlertVerifyMessage({ status: 400, message: response.result });
+      if ([200, 201, 204].includes(status)) {
+        if (
+          (response?.status == 200 || response?.status == 201) &&
+          response?.data?.token
+        ) {
+          setMessage({ user: response.data, status: 200 });
+        } else if (response?.data?.token) {
+          setMessage({ user: response.data, status: 200 });
         } else {
-          setGeneralErrorMessage({ status: 400, message: response.result });
-        }
-      } else {
-        if (status == 403 && response?.result == "Failed") {
           setGeneralErrorMessage({
             status: 400,
-            message: response.error.description,
+            message:
+              response?.error?.description ||
+              response?.result ||
+              response?.message ||
+              "Registration failed",
           });
         }
-        if (response?.result == "User account not verified") {
-          setAlertVerifyMessage({ status: 400, message: response.result });
-        } else {
-          setAlertVerifyMessage({ status: 400, message: response.result });
-        }
+      } else {
+        setGeneralErrorMessage({
+          status: 400,
+          message:
+            response?.error?.description ||
+            response?.result ||
+            response?.message ||
+            "Registration failed",
+        });
       }
       setIsLoading(false);
     });
@@ -106,30 +107,35 @@ const BodyLogin = (props) => {
       errors.msisdn = "Invalid phone number";
     }
     if (!values.password || values.password.length < 4) {
-      errors.password = "Invalid password";
+      errors.password = "Password must be at least 4 characters";
+    }
+    if (values.password2 !== values.password) {
+      errors.password2 = "Passwords don't match";
     }
     return errors;
   };
 
-  const navigateAway = (url) => {
-    navigate(url);
+  const openLogin = () => {
+    dispatch({ type: "SET", key: "authModalMode", payload: "login" });
+    dispatch({ type: "SET", key: "showloginmodal", payload: true });
   };
 
-  const MyLoginForm = (formProps) => {
+  const MyRegisterForm = (formProps) => {
     const { errors, values, submitForm, setFieldValue } = formProps;
     const [showPassword, setShowPassword] = useState(false);
+    const [showPassword2, setShowPassword2] = useState(false);
 
     const onFieldChanged = (ev) => {
       let field = ev.target.name;
       let value = ev.target.value;
-      if (field == "msisdn") {
+      if (field === "msisdn") {
         value = value.trim();
       }
       setFieldValue(field, value);
     };
 
     const handleKeyPress = (event) => {
-      if (event.key == "Enter") {
+      if (event.key === "Enter") {
         event.preventDefault();
         submitForm();
       }
@@ -138,20 +144,16 @@ const BodyLogin = (props) => {
     return (
       <div className="sc-login-form">
         <Form>
-          {state?.sessionMessage && (
-            <div className="sc-login-session-alert">{state.sessionMessage}</div>
-          )}
           <Row className="g-0">
             <div className="sc-login-field">
-              <label className="sc-login-label" htmlFor="sc-login-msisdn">
+              <label className="sc-login-label" htmlFor="sc-reg-msisdn">
                 Mobile Phone
               </label>
               <input
                 type="text"
-                id="sc-login-msisdn"
+                id="sc-reg-msisdn"
                 name="msisdn"
                 className={`sc-login-input ${errors.msisdn ? "is-invalid" : ""}`}
-                data-action="grow"
                 placeholder={errors.msisdn || "07xxxxxxxx"}
                 onChange={(ev) => onFieldChanged(ev)}
                 value={values.msisdn}
@@ -159,23 +161,36 @@ const BodyLogin = (props) => {
               />
             </div>
             <div className="sc-login-field">
-              <label className="sc-login-label" htmlFor="sc-login-password">
+              <label className="sc-login-label" htmlFor="sc-reg-displayName">
+                Display Name <span className="sc-login-optional">(optional)</span>
+              </label>
+              <input
+                type="text"
+                id="sc-reg-displayName"
+                name="displayName"
+                className="sc-login-input"
+                placeholder="Player name"
+                onChange={(ev) => onFieldChanged(ev)}
+                value={values.displayName}
+                autoComplete="nickname"
+              />
+            </div>
+            <div className="sc-login-field">
+              <label className="sc-login-label" htmlFor="sc-reg-password">
                 Password
               </label>
               <div className="sc-login-password-wrap">
                 <input
                   type={showPassword ? "text" : "password"}
-                  id="sc-login-password"
+                  id="sc-reg-password"
                   name="password"
                   className={`sc-login-input ${
                     errors.password ? "is-invalid" : ""
                   }`}
-                  data-action="grow"
-                  placeholder={errors.password || "Password"}
+                  placeholder={errors.password || "Min. 4 characters"}
                   onChange={(ev) => onFieldChanged(ev)}
-                  onKeyPress={handleKeyPress}
                   value={values.password}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -186,29 +201,37 @@ const BodyLogin = (props) => {
                   {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
                 </button>
               </div>
-              <input type="hidden" name="ref" value="{props.refURL}" />
             </div>
-            <label className="sc-login-remember">
-              <input type="checkbox" name="remember" value="1" />
-              <span>Remember me</span>
-            </label>
-            {alertVerifyMessage && (
-              <div className="sc-login-alert-block">
-                <Alert message={alertVerifyMessage} />
-                <div
-                  onClick={() =>
-                    dispatch({ type: "DEL", key: "showloginmodal" })
+            <div className="sc-login-field">
+              <label className="sc-login-label" htmlFor="sc-reg-password2">
+                Confirm Password
+              </label>
+              <div className="sc-login-password-wrap">
+                <input
+                  type={showPassword2 ? "text" : "password"}
+                  id="sc-reg-password2"
+                  name="password2"
+                  className={`sc-login-input ${
+                    errors.password2 ? "is-invalid" : ""
+                  }`}
+                  placeholder={errors.password2 || "Repeat password"}
+                  onChange={(ev) => onFieldChanged(ev)}
+                  onKeyPress={handleKeyPress}
+                  value={values.password2}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="sc-login-eye"
+                  aria-label={
+                    showPassword2 ? "Hide password" : "Show password"
                   }
+                  onClick={() => setShowPassword2(!showPassword2)}
                 >
-                  <Link
-                    className="sc-login-link sc-login-link--warn"
-                    to={"/verify-account"}
-                  >
-                    Click here to verify
-                  </Link>
-                </div>
+                  {showPassword2 ? <FaRegEye /> : <FaRegEyeSlash />}
+                </button>
               </div>
-            )}
+            </div>
             {generalErrorMessage && (
               <div className="sc-login-alert-block">
                 <Alert message={generalErrorMessage} />
@@ -219,11 +242,7 @@ const BodyLogin = (props) => {
                 type="button"
                 className="sc-login-btn sc-login-btn--ghost"
                 onClick={() => {
-                  dispatch({
-                    type: "SET",
-                    key: "showloginmodal",
-                    payload: false,
-                  });
+                  dispatch({ type: "SET", key: "showloginmodal", payload: false });
                   dispatch({ type: "DEL", key: "authModalMode" });
                 }}
               >
@@ -232,26 +251,17 @@ const BodyLogin = (props) => {
               <button
                 className="sc-login-btn sc-login-btn--primary"
                 type="submit"
+                disabled={isLoading}
               >
-                {isLoading ? <span>Logging In …</span> : <span>Login</span>}
+                {isLoading ? <span>Creating …</span> : <span>Register</span>}
               </button>
             </div>
             <button
               type="button"
-              className="sc-login-link-btn"
-              onClick={() => navigateAway("/forgot-password")}
-            >
-              Forgot Password
-            </button>
-            <button
-              type="button"
               className="sc-login-link-btn sc-login-link-btn--muted"
-              onClick={() => {
-                dispatch({ type: "SET", key: "authModalMode", payload: "register" });
-                dispatch({ type: "SET", key: "showloginmodal", payload: true });
-              }}
+              onClick={openLogin}
             >
-              Don&apos;t have an account? Register now
+              Already have an account? Login
             </button>
           </Row>
         </Form>
@@ -267,12 +277,16 @@ const BodyLogin = (props) => {
             You are already logged in.
           </div>
           <div className="sc-login-already__actions">
-            <Link to={"/game"} className="sc-login-btn sc-login-btn--ghost">
-              Go Home
-            </Link>
-            <Link to={"/logout"} className="sc-login-btn sc-login-btn--danger">
-              Logout
-            </Link>
+            <button
+              type="button"
+              className="sc-login-btn sc-login-btn--ghost"
+              onClick={() => {
+                dispatch({ type: "SET", key: "showloginmodal", payload: false });
+                dispatch({ type: "DEL", key: "authModalMode" });
+              }}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
@@ -284,11 +298,11 @@ const BodyLogin = (props) => {
           validateOnBlur={false}
           validate={validate}
         >
-          {(formProps) => <MyLoginForm {...formProps} />}
+          {(formProps) => <MyRegisterForm {...formProps} />}
         </Formik>
       )}
     </>
   );
 };
 
-export default React.memo(BodyLogin);
+export default React.memo(BodyRegister);

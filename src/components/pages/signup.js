@@ -55,9 +55,10 @@ const Signup = (props) => {
                     status: 400,
                     message:
                         response?.error?.description ||
-                        response?.result ||
+                        response?.error?.message ||
                         response?.message ||
-                        "Registration failed",
+                        response?.result ||
+                        "Registration failed. Please try again.",
                 });
             }
             setIsLoading(false);

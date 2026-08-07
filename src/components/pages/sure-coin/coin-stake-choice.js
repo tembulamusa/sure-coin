@@ -22,6 +22,8 @@ import TailsCoin from "../../../assets/surecoin/tails.png";
 
 const DEFAULT_AUTO_ROUNDS = 10;
 const MAX_AUTO_ROUNDS = 99;
+/** Max wait for bet:accepted / bet:rejected after emitting bet:place. */
+const PLACE_BET_TIMEOUT_MS = 10000;
 
 const ScToggle = ({ checked, onChange, label }) => (
     <button
@@ -52,6 +54,7 @@ const CoinStakeChoice = (props) => {
     const pendingBetRef = useRef(null);
     const placedForRoundRef = useRef(null);
     const autoBetPendingRef = useRef(false);
+    const placeBetTimeoutRef = useRef(null);
 
     const minimumBetAmount = roundState.config?.minBetAmount ?? 5;
     const payoutMultiplier = roundState.config?.payoutMultiplier ?? 2;
@@ -114,6 +117,39 @@ const CoinStakeChoice = (props) => {
 
     const currentRoundKey = () => roundState.roundId ?? roundState.roundNumber ?? null;
 
+    const clearPendingBet = () => {
+        pendingBetRef.current = null;
+        setPendingBet(null);
+    };
+
+    const clearPlaceBetTimeout = () => {
+        if (placeBetTimeoutRef.current == null) return;
+        clearTimeout(placeBetTimeoutRef.current);
+        placeBetTimeoutRef.current = null;
+    };
+
+    const unlockPlaceBetUi = () => {
+        placedForRoundRef.current = null;
+        setUserPlaceBetOn(false);
+        clearPendingBet();
+    };
+
+    const armPlaceBetTimeout = () => {
+        clearPlaceBetTimeout();
+        placeBetTimeoutRef.current = setTimeout(() => {
+            placeBetTimeoutRef.current = null;
+            unlockPlaceBetUi();
+            dispatch({
+                type: "SET",
+                key: "coinsAlertMsg",
+                payload: {
+                    status: 400,
+                    message: "Bet timed out — no response from server",
+                },
+            });
+        }, PLACE_BET_TIMEOUT_MS);
+    };
+
     const emitBet = (pick, stake) => {
         if (!user?.profile_id || !pick) return false;
 
@@ -140,12 +176,8 @@ const CoinStakeChoice = (props) => {
             session_id: sessionId,
             idempotency_key: idempotencyKey,
         });
+        armPlaceBetTimeout();
         return true;
-    };
-
-    const clearPendingBet = () => {
-        pendingBetRef.current = null;
-        setPendingBet(null);
     };
 
     const queuePendingBet = (pick, stake, message) => {
@@ -287,6 +319,7 @@ const CoinStakeChoice = (props) => {
 
     useEffect(() => {
         if (roundState.phase === "WAITING" && roundState.myBet) {
+            clearPlaceBetTimeout();
             setUserPlaceBetOn(true);
             setPickedBtn(String(roundState.myBet.coinSide).toLowerCase());
             clearPendingBet();
@@ -297,21 +330,30 @@ const CoinStakeChoice = (props) => {
             const placedThisRound =
                 roundKey != null && placedForRoundRef.current === roundKey;
             if (!pendingBetRef.current && !placedThisRound) {
+                clearPlaceBetTimeout();
                 setUserPlaceBetOn(false);
             }
         }
     }, [roundState.phase, roundState.myBet, roundState.roundId]);
 
-    // On bet rejection, allow re-confirm / clear stale pending.
+    // Clear place-bet wait as soon as the server accepts (myBet set).
+    useEffect(() => {
+        if (roundState.myBet) {
+            clearPlaceBetTimeout();
+        }
+    }, [roundState.myBet]);
+
+    // On bet rejection / timeout alert, allow re-confirm / clear stale pending.
     useEffect(() => {
         const alert = state?.coinsAlertMsg;
         if (!alert || alert.status === 200) return;
         // Login prompt is not a bet failure — leave any next-round queue intact.
         if (/please login/i.test(String(alert.message || ""))) return;
-        setUserPlaceBetOn(false);
-        clearPendingBet();
-        placedForRoundRef.current = null;
+        clearPlaceBetTimeout();
+        unlockPlaceBetUi();
     }, [state?.coinsAlertMsg]);
+
+    useEffect(() => () => clearPlaceBetTimeout(), []);
 
     const pickClick = async (pick) => {
         await unlockSurecoinAudio();

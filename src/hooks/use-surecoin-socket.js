@@ -43,31 +43,43 @@ const useSurecoinSocket = () => {
   const { state: roundState, dispatch: roundDispatch } = useSureCoinRound();
   const profileIdRef = useRef(null);
   const autoBetRef = useRef({ enabled: false, pick: null, amount: 5 });
+  const isCoinRotatingRef = useRef(Boolean(appState?.iscoinrotating));
+  const appDispatchRef = useRef(appDispatch);
+  const roundDispatchRef = useRef(roundDispatch);
 
-  const applyBalanceUpdate = useCallback(
-    (cash, bonus) => {
-      const stored = getFromLocalStorage("user");
-      if (!stored) return;
+  useEffect(() => {
+    isCoinRotatingRef.current = Boolean(appState?.iscoinrotating);
+  }, [appState?.iscoinrotating]);
 
-      const totalBalance =
-        cash != null && bonus != null
-          ? Number(cash) + Number(bonus)
-          : stored.balance;
+  useEffect(() => {
+    appDispatchRef.current = appDispatch;
+  }, [appDispatch]);
 
-      const nextUser = {
-        ...stored,
-        balance: cash != null && bonus != null ? totalBalance : stored.balance,
-        cash_balance: cash ?? stored.cash_balance,
-        bonus_balance: bonus ?? stored.bonus_balance,
-      };
-      setLocalStorage("user", nextUser);
+  useEffect(() => {
+    roundDispatchRef.current = roundDispatch;
+  }, [roundDispatch]);
 
-      if (!appState?.iscoinrotating) {
-        appDispatch({ type: "SET", key: "user", payload: nextUser });
-      }
-    },
-    [appDispatch, appState?.iscoinrotating]
-  );
+  const applyBalanceUpdate = useCallback((cash, bonus) => {
+    const stored = getFromLocalStorage("user");
+    if (!stored) return;
+
+    const totalBalance =
+      cash != null && bonus != null
+        ? Number(cash) + Number(bonus)
+        : stored.balance;
+
+    const nextUser = {
+      ...stored,
+      balance: cash != null && bonus != null ? totalBalance : stored.balance,
+      cash_balance: cash ?? stored.cash_balance,
+      bonus_balance: bonus ?? stored.bonus_balance,
+    };
+    setLocalStorage("user", nextUser);
+
+    if (!isCoinRotatingRef.current) {
+      appDispatchRef.current({ type: "SET", key: "user", payload: nextUser });
+    }
+  }, []);
 
   const refreshBalance = useCallback(async () => {
     const user = getFromLocalStorage("user");
@@ -84,46 +96,44 @@ const useSurecoinSocket = () => {
     }
   }, [applyBalanceUpdate]);
 
-  const handleRoundPayload = useCallback(
-    (eventName, payload) => {
-      if (eventName === "round:waiting") {
-        roundDispatch({ type: "NEW_ROUND", payload });
-        return;
-      }
-      if (eventName === "round:flip_start") {
-        roundDispatch({
-          type: "APPLY_ROUND",
-          payload: {
-            ...payload,
-            phase: "FLIPPING",
-            flip_seconds: payload?.flip_seconds,
-          },
-        });
-        return;
-      }
-      if (eventName === "round:flip_tick") {
-        roundDispatch({
-          type: "APPLY_ROUND",
-          payload: {
-            ...payload,
-            phase: "FLIPPING",
-            progress: payload?.progress,
-          },
-        });
-        return;
-      }
-      if (eventName === "round:result") {
-        roundDispatch({ type: "APPLY_ROUND", payload });
-        roundDispatch({
-          type: "SETTLE_LIVE_BETS",
-          payload: { winningSide: payload?.winning_side },
-        });
-        return;
-      }
-      roundDispatch({ type: "APPLY_ROUND", payload });
-    },
-    [roundDispatch]
-  );
+  const handleRoundPayload = useCallback((eventName, payload) => {
+    const dispatch = roundDispatchRef.current;
+    if (eventName === "round:waiting") {
+      dispatch({ type: "NEW_ROUND", payload });
+      return;
+    }
+    if (eventName === "round:flip_start") {
+      dispatch({
+        type: "APPLY_ROUND",
+        payload: {
+          ...payload,
+          phase: "FLIPPING",
+          flip_seconds: payload?.flip_seconds,
+        },
+      });
+      return;
+    }
+    if (eventName === "round:flip_tick") {
+      dispatch({
+        type: "APPLY_ROUND",
+        payload: {
+          ...payload,
+          phase: "FLIPPING",
+          progress: payload?.progress,
+        },
+      });
+      return;
+    }
+    if (eventName === "round:result") {
+      dispatch({ type: "APPLY_ROUND", payload });
+      dispatch({
+        type: "SETTLE_LIVE_BETS",
+        payload: { winningSide: payload?.winning_side },
+      });
+      return;
+    }
+    dispatch({ type: "APPLY_ROUND", payload });
+  }, []);
 
   const fetchConfig = useCallback(async () => {
     const [status, result] = await makeRequest({
@@ -132,7 +142,7 @@ const useSurecoinSocket = () => {
       api_version: "sureCoinPublic",
     });
     if (status === 200 && result) {
-      roundDispatch({
+      roundDispatchRef.current({
         type: "SET_CONFIG",
         payload: {
           minBetAmount: Number(result.min_bet_amount ?? 5),
@@ -145,7 +155,7 @@ const useSurecoinSocket = () => {
     }
 
     await refreshBalance();
-  }, [roundDispatch, refreshBalance]);
+  }, [refreshBalance]);
 
   const fetchCurrentBets = useCallback(async () => {
     const [status, result] = await makeRequest({
@@ -155,27 +165,27 @@ const useSurecoinSocket = () => {
     });
     if (status === 200 && Array.isArray(result?.bets)) {
       result.bets.forEach((bet, idx) => {
-        roundDispatch({ type: "ADD_LIVE_BET", payload: mapApiBet(bet, idx) });
+        roundDispatchRef.current({
+          type: "ADD_LIVE_BET",
+          payload: mapApiBet(bet, idx),
+        });
       });
     }
-  }, [roundDispatch]);
+  }, []);
 
-  const fetchLeaderboard = useCallback(
-    async (period = "day", metric = "win") => {
-      const [status, result] = await makeRequest({
-        url: `leaderboard?period=${period}&metric=${metric}&limit=20`,
-        method: "GET",
-        api_version: "sureCoinPublic",
+  const fetchLeaderboard = useCallback(async (period = "day", metric = "win") => {
+    const [status, result] = await makeRequest({
+      url: `leaderboard?period=${period}&metric=${metric}&limit=20`,
+      method: "GET",
+      api_version: "sureCoinPublic",
+    });
+    if (status === 200 && Array.isArray(result?.entries)) {
+      roundDispatchRef.current({
+        type: "SET_LEADERBOARD",
+        payload: result.entries.map((entry, idx) => mapApiBet(entry, idx)),
       });
-      if (status === 200 && Array.isArray(result?.entries)) {
-        roundDispatch({
-          type: "SET_LEADERBOARD",
-          payload: result.entries.map((entry, idx) => mapApiBet(entry, idx)),
-        });
-      }
-    },
-    [roundDispatch]
-  );
+    }
+  }, []);
 
   const placeBet = useCallback(
     ({ coinSide, betAmount, sessionId, idempotencyKey }) => {
@@ -193,6 +203,9 @@ const useSurecoinSocket = () => {
     []
   );
 
+  // Keep one Engine.IO session for the game shell lifetime.
+  // Do NOT put rotating callbacks in deps — that was disconnecting on every
+  // iscoinrotating / handler identity change and looked like "polling" (many 101s).
   useEffect(() => {
     const user = appState?.user || getFromLocalStorage("user");
     const profileId = user?.profile_id;
@@ -206,15 +219,15 @@ const useSurecoinSocket = () => {
     fetchLeaderboard();
 
     const onConnect = () => {
-      roundDispatch({ type: "SET_CONNECTED", payload: true });
+      roundDispatchRef.current({ type: "SET_CONNECTED", payload: true });
     };
 
     const onDisconnect = () => {
-      roundDispatch({ type: "SET_CONNECTED", payload: false });
+      roundDispatchRef.current({ type: "SET_CONNECTED", payload: false });
     };
 
     const onConnectError = () => {
-      roundDispatch({ type: "SET_CONNECTED", payload: false });
+      roundDispatchRef.current({ type: "SET_CONNECTED", payload: false });
     };
 
     const lastTickMsRef = { current: 0 };
@@ -240,22 +253,25 @@ const useSurecoinSocket = () => {
       socket.on(eventName, roundEventHandlers[eventName]);
     });
 
-    socket.on("round:bet", (payload) => {
-      roundDispatch({ type: "ADD_LIVE_BET", payload: mapApiBet(payload) });
-    });
+    const onRoundBet = (payload) => {
+      roundDispatchRef.current({
+        type: "ADD_LIVE_BET",
+        payload: mapApiBet(payload),
+      });
+    };
 
-    socket.on("round:bets_settled", (payload) => {
+    const onBetsSettled = (payload) => {
       if (Array.isArray(payload?.bets)) {
         const settled = payload.bets.map((bet, idx) => mapApiBet(bet, idx));
-        roundDispatch({
+        roundDispatchRef.current({
           type: "ARCHIVE_LIVE_BETS",
           payload: settled,
         });
       }
-    });
+    };
 
-    socket.on("bet:accepted", (payload) => {
-      roundDispatch({
+    const onBetAccepted = (payload) => {
+      roundDispatchRef.current({
         type: "SET_MY_BET",
         payload: {
           betId: payload.bet_id,
@@ -265,32 +281,33 @@ const useSurecoinSocket = () => {
           roundId: payload.round_id,
         },
       });
-    });
+    };
 
-    socket.on("bet:rejected", (payload) => {
+    const onBetRejected = (payload) => {
       const reason = String(payload?.reason ?? "Unable to place bet");
-      appDispatch({
+      appDispatchRef.current({
         type: "SET",
         key: "coinsAlertMsg",
         payload: { status: 400, message: reason },
       });
       if (/insuff/i.test(reason)) {
-        appDispatch({
+        appDispatchRef.current({
           type: "SET",
           key: "promptdepositrequest",
           payload: { show: true, message: reason },
         });
       }
-    });
+    };
 
-    socket.on("bet:resolved", (payload) => {
-      const won = Boolean(payload?.won);
+    const onBetResolved = (payload) => {
+      // Backend historically emitted `win`; UI expects `won`.
+      const won = Boolean(payload?.won ?? payload?.win);
       const payout =
         payload?.payout != null && Number.isFinite(Number(payload.payout))
           ? Number(payload.payout)
           : null;
 
-      roundDispatch({
+      roundDispatchRef.current({
         type: "SET_LAST_RESOLVED",
         payload: {
           betId: payload?.bet_id ?? null,
@@ -301,7 +318,7 @@ const useSurecoinSocket = () => {
       });
 
       if (won) {
-        roundDispatch({
+        roundDispatchRef.current({
           type: "PUSH_WIN_TOAST",
           payload: {
             betId: payload?.bet_id ?? null,
@@ -313,8 +330,13 @@ const useSurecoinSocket = () => {
       }
 
       refreshBalance();
-    });
+    };
 
+    socket.on("round:bet", onRoundBet);
+    socket.on("round:bets_settled", onBetsSettled);
+    socket.on("bet:accepted", onBetAccepted);
+    socket.on("bet:rejected", onBetRejected);
+    socket.on("bet:resolved", onBetResolved);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
@@ -327,28 +349,20 @@ const useSurecoinSocket = () => {
       ROUND_EVENTS.forEach((eventName) => {
         socket.off(eventName, roundEventHandlers[eventName]);
       });
-      BET_EVENTS.forEach((eventName) => {
-        socket.off(eventName);
-      });
-      socket.off("round:bet");
-      socket.off("round:bets_settled");
+      socket.off("round:bet", onRoundBet);
+      socket.off("round:bets_settled", onBetsSettled);
+      socket.off("bet:accepted", onBetAccepted);
+      socket.off("bet:rejected", onBetRejected);
+      socket.off("bet:resolved", onBetResolved);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
+      // Drop the transport only when leaving the game shell / auth changes.
       disconnectSurecoinSocket();
     };
-  }, [
-    appState?.user?.profile_id,
-    appState?.user?.token,
-    appDispatch,
-    roundDispatch,
-    handleRoundPayload,
-    applyBalanceUpdate,
-    fetchConfig,
-    fetchCurrentBets,
-    fetchLeaderboard,
-    refreshBalance,
-  ]);
+    // Intentionally token/profile only — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appState?.user?.profile_id, appState?.user?.token]);
 
   return { placeBet, fetchLeaderboard, roundState, autoBetRef };
 };

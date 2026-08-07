@@ -17,12 +17,16 @@ export const getSurecoinSocket = () => {
   if (!socketInstance) {
     socketInstance = io(SOCKET_URL, {
       path: SOCKET_PATH,
-      transports: ["websocket", "polling"],
+      // Prefer websocket; avoid polling→upgrade churn behind Cloudflare/nginx.
+      transports: ["websocket"],
+      upgrade: false,
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 3000,
+      reconnectionDelayMax: 5000,
+      // Engine.IO defaults are fine; keep ping visible under proxy idle limits.
+      timeout: 20000,
     });
   }
   return socketInstance;
@@ -35,14 +39,16 @@ export const connectSurecoinSocket = () => {
 
   if (token) {
     socket.auth = { token };
-    socket.io.opts.query = { token };
-    socket.io.opts.extraHeaders = {
-      Authorization: `Bearer ${token}`,
-    };
+    // Keep query token for netty-socketio handshake readers; only set when changed
+    // so Engine.IO does not tear down an open websocket.
+    if (socket.io.opts.query?.token !== token) {
+      socket.io.opts.query = { token };
+    }
   } else {
     socket.auth = {};
-    socket.io.opts.query = {};
-    socket.io.opts.extraHeaders = {};
+    if (socket.io.opts.query?.token) {
+      socket.io.opts.query = {};
+    }
   }
 
   const authChanged = lastAuthToken !== token;

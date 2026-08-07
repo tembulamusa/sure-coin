@@ -31,7 +31,8 @@ export const buildSurecoinSignupPayload = ({
   const normalizedDisplayName = String(displayName ?? "").trim();
 
   if (normalizedDisplayName) {
-    payload.displayName = normalizedDisplayName;
+    // API uses SNAKE_CASE JSON (display_name)
+    payload.display_name = normalizedDisplayName;
   }
 
   return payload;

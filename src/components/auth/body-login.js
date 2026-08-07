@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Row from "react-bootstrap/Row";
 import { Formik, Form } from "formik";
 import makeRequest from "../utils/fetch-request";
-import { Context } from "../../context/store";
 import { getFromLocalStorage, setLocalStorage } from "../utils/local-storage";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Alert from "../utils/alert";
@@ -12,17 +11,176 @@ import {
   isValidSurecoinMsisdn,
 } from "../utils/surecoin-auth-payload";
 
+const navigateAwayRoutes = ["/login", "/signup"];
+
+const LoginFormFields = React.memo(function LoginFormFields({
+  errors,
+  values,
+  submitForm,
+  setFieldValue,
+  isLoading,
+  sessionMessage,
+  alertVerifyMessage,
+  generalErrorMessage,
+  dispatch,
+  navigateAway,
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const onFieldChanged = (ev) => {
+    let field = ev.target.name;
+    let value = ev.target.value;
+    if (field == "msisdn") {
+      value = value.trim();
+    }
+    setFieldValue(field, value);
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key == "Enter") {
+      event.preventDefault();
+      submitForm();
+    }
+  };
+
+  return (
+    <div className="sc-login-form">
+      <Form>
+        {sessionMessage && (
+          <div className="sc-login-session-alert">{sessionMessage}</div>
+        )}
+        <Row className="g-0">
+          <div className="sc-login-field">
+            <label className="sc-login-label" htmlFor="sc-login-msisdn">
+              Mobile Phone
+            </label>
+            <input
+              type="text"
+              id="sc-login-msisdn"
+              name="msisdn"
+              className={`sc-login-input ${errors.msisdn ? "is-invalid" : ""}`}
+              data-action="grow"
+              placeholder={errors.msisdn || "07xxxxxxxx"}
+              onChange={(ev) => onFieldChanged(ev)}
+              value={values.msisdn}
+              autoComplete="tel"
+            />
+          </div>
+          <div className="sc-login-field">
+            <label className="sc-login-label" htmlFor="sc-login-password">
+              Password
+            </label>
+            <div className="sc-login-password-wrap">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="sc-login-password"
+                name="password"
+                className={`sc-login-input ${
+                  errors.password ? "is-invalid" : ""
+                }`}
+                data-action="grow"
+                placeholder={errors.password || "Password"}
+                onChange={(ev) => onFieldChanged(ev)}
+                onKeyPress={handleKeyPress}
+                value={values.password}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="sc-login-eye"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
+              </button>
+            </div>
+          </div>
+          <label className="sc-login-remember">
+            <input type="checkbox" name="remember" value="1" />
+            <span>Remember me</span>
+          </label>
+          {alertVerifyMessage && (
+            <div className="sc-login-alert-block">
+              <Alert message={alertVerifyMessage} />
+              <div
+                onClick={() =>
+                  dispatch({ type: "DEL", key: "showloginmodal" })
+                }
+              >
+                <Link
+                  className="sc-login-link sc-login-link--warn"
+                  to={"/verify-account"}
+                >
+                  Click here to verify
+                </Link>
+              </div>
+            </div>
+          )}
+          {generalErrorMessage && (
+            <div className="sc-login-alert-block">
+              <Alert message={generalErrorMessage} />
+            </div>
+          )}
+          <div className="sc-login-actions">
+            <button
+              type="button"
+              className="sc-login-btn sc-login-btn--ghost"
+              onClick={() => {
+                dispatch({
+                  type: "SET",
+                  key: "showloginmodal",
+                  payload: false,
+                });
+                dispatch({ type: "DEL", key: "authModalMode" });
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="sc-login-btn sc-login-btn--primary"
+              type="submit"
+            >
+              {isLoading ? <span>Logging In …</span> : <span>Login</span>}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="sc-login-link-btn"
+            onClick={() => navigateAway("/forgot-password")}
+          >
+            Forgot Password
+          </button>
+          <button
+            type="button"
+            className="sc-login-link-btn sc-login-link-btn--muted"
+            onClick={() => {
+              dispatch({ type: "SET", key: "authModalMode", payload: "register" });
+              dispatch({ type: "SET", key: "showloginmodal", payload: true });
+            }}
+          >
+            Don&apos;t have an account? Register now
+          </button>
+        </Row>
+      </Form>
+    </div>
+  );
+});
+
 const BodyLogin = (props) => {
-  const { setUser } = props;
+  const {
+    setUser,
+    dispatch,
+    isModalOpen,
+    sessionMessage,
+    contextUser,
+  } = props;
   const [isLoading, setIsLoading] = useState(null);
   const [message, setMessage] = useState(null);
   const [generalErrorMessage, setGeneralErrorMessage] = useState(null);
-  const [state, dispatch] = useContext(Context);
   const [user, setLocalUser] = useState(() => getFromLocalStorage("user"));
   const [alertVerifyMessage, setAlertVerifyMessage] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const navigateAwayRoutes = ["/login", "/signup"];
 
   const initialValues = {
     msisdn: "",
@@ -31,10 +189,10 @@ const BodyLogin = (props) => {
 
   // Re-sync when modal opens or context user is cleared (e.g. socket session expired)
   useEffect(() => {
-    if (state?.showloginmodal == true) {
+    if (isModalOpen) {
       setLocalUser(getFromLocalStorage("user"));
     }
-  }, [state?.showloginmodal, state?.user, state?.sessionMessage]);
+  }, [isModalOpen, contextUser, sessionMessage]);
 
   const Notify = useCallback(
     (loginMessage) => {
@@ -44,7 +202,7 @@ const BodyLogin = (props) => {
       setLocalStorage("user", loginMessage.user);
       setLocalUser(loginMessage.user);
 
-      if (state?.showloginmodal == true && typeof setUser === "function") {
+      if (isModalOpen && typeof setUser === "function") {
         setUser(loginMessage.user);
       }
       dispatch({ type: "DEL", key: "showloginmodal" });
@@ -61,7 +219,7 @@ const BodyLogin = (props) => {
         }
       }
     },
-    [dispatch, location.pathname, location.search, navigate, setUser, state?.showloginmodal]
+    [dispatch, location.pathname, location.search, navigate, setUser, isModalOpen]
   );
 
   useEffect(() => {
@@ -115,153 +273,12 @@ const BodyLogin = (props) => {
     return errors;
   };
 
-  const navigateAway = (url) => {
-    navigate(url);
-  };
-
-  const MyLoginForm = (formProps) => {
-    const { errors, values, submitForm, setFieldValue } = formProps;
-    const [showPassword, setShowPassword] = useState(false);
-
-    const onFieldChanged = (ev) => {
-      let field = ev.target.name;
-      let value = ev.target.value;
-      if (field == "msisdn") {
-        value = value.trim();
-      }
-      setFieldValue(field, value);
-    };
-
-    const handleKeyPress = (event) => {
-      if (event.key == "Enter") {
-        event.preventDefault();
-        submitForm();
-      }
-    };
-
-    return (
-      <div className="sc-login-form">
-        <Form>
-          {state?.sessionMessage && (
-            <div className="sc-login-session-alert">{state.sessionMessage}</div>
-          )}
-          <Row className="g-0">
-            <div className="sc-login-field">
-              <label className="sc-login-label" htmlFor="sc-login-msisdn">
-                Mobile Phone
-              </label>
-              <input
-                type="text"
-                id="sc-login-msisdn"
-                name="msisdn"
-                className={`sc-login-input ${errors.msisdn ? "is-invalid" : ""}`}
-                data-action="grow"
-                placeholder={errors.msisdn || "07xxxxxxxx"}
-                onChange={(ev) => onFieldChanged(ev)}
-                value={values.msisdn}
-                autoComplete="tel"
-              />
-            </div>
-            <div className="sc-login-field">
-              <label className="sc-login-label" htmlFor="sc-login-password">
-                Password
-              </label>
-              <div className="sc-login-password-wrap">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="sc-login-password"
-                  name="password"
-                  className={`sc-login-input ${
-                    errors.password ? "is-invalid" : ""
-                  }`}
-                  data-action="grow"
-                  placeholder={errors.password || "Password"}
-                  onChange={(ev) => onFieldChanged(ev)}
-                  onKeyPress={handleKeyPress}
-                  value={values.password}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="sc-login-eye"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
-                </button>
-              </div>
-              <input type="hidden" name="ref" value="{props.refURL}" />
-            </div>
-            <label className="sc-login-remember">
-              <input type="checkbox" name="remember" value="1" />
-              <span>Remember me</span>
-            </label>
-            {alertVerifyMessage && (
-              <div className="sc-login-alert-block">
-                <Alert message={alertVerifyMessage} />
-                <div
-                  onClick={() =>
-                    dispatch({ type: "DEL", key: "showloginmodal" })
-                  }
-                >
-                  <Link
-                    className="sc-login-link sc-login-link--warn"
-                    to={"/verify-account"}
-                  >
-                    Click here to verify
-                  </Link>
-                </div>
-              </div>
-            )}
-            {generalErrorMessage && (
-              <div className="sc-login-alert-block">
-                <Alert message={generalErrorMessage} />
-              </div>
-            )}
-            <div className="sc-login-actions">
-              <button
-                type="button"
-                className="sc-login-btn sc-login-btn--ghost"
-                onClick={() => {
-                  dispatch({
-                    type: "SET",
-                    key: "showloginmodal",
-                    payload: false,
-                  });
-                  dispatch({ type: "DEL", key: "authModalMode" });
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="sc-login-btn sc-login-btn--primary"
-                type="submit"
-              >
-                {isLoading ? <span>Logging In …</span> : <span>Login</span>}
-              </button>
-            </div>
-            <button
-              type="button"
-              className="sc-login-link-btn"
-              onClick={() => navigateAway("/forgot-password")}
-            >
-              Forgot Password
-            </button>
-            <button
-              type="button"
-              className="sc-login-link-btn sc-login-link-btn--muted"
-              onClick={() => {
-                dispatch({ type: "SET", key: "authModalMode", payload: "register" });
-                dispatch({ type: "SET", key: "showloginmodal", payload: true });
-              }}
-            >
-              Don&apos;t have an account? Register now
-            </button>
-          </Row>
-        </Form>
-      </div>
-    );
-  };
+  const navigateAway = useCallback(
+    (url) => {
+      navigate(url);
+    },
+    [navigate]
+  );
 
   return (
     <>
@@ -288,7 +305,17 @@ const BodyLogin = (props) => {
           validateOnBlur={false}
           validate={validate}
         >
-          {(formProps) => <MyLoginForm {...formProps} />}
+          {(formProps) => (
+            <LoginFormFields
+              {...formProps}
+              isLoading={isLoading}
+              sessionMessage={sessionMessage}
+              alertVerifyMessage={alertVerifyMessage}
+              generalErrorMessage={generalErrorMessage}
+              dispatch={dispatch}
+              navigateAway={navigateAway}
+            />
+          )}
         </Formik>
       )}
     </>

@@ -19,11 +19,16 @@ const GameDisplay = ({
 }) => {
   const { state: roundState } = useSureCoinRound();
   const isWaiting = roundState.phase === "WAITING";
+  // Prefer live settle animation outcome; fall back to round winning side
+  // so RESULT is visible even if the coin briefly cleared the panel mid-spin.
+  const displayOutcome =
+    lastOutcome ||
+    (roundState.phase === "RESULT" ? roundState.winningSide : null);
 
   return (
     <div className="sc-game-display">
       <div className="sc-game-stage">
-        <OutcomePanel outcome={lastOutcome} />
+        <OutcomePanel outcome={displayOutcome} />
 
         {/* Flex absorber: shrinks/grows with viewport; coin scales inside */}
         <div className="sc-coin-canvas">

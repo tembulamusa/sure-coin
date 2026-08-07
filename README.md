@@ -48,7 +48,12 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Interactive UI mode: `npm run test:e2e:ui`
+**Watch the UI while tests run**
+
+- `npm run test:e2e:headed` — opens a visible Chromium window (400ms slow-mo) so you can watch signup / login / deposit.
+- `npm run test:e2e:ui` — Playwright’s interactive UI to pick and step through tests.
+
+Both need a graphical display (`DISPLAY` set, local desktop, or X11/Wayland forwarding). Headed mode will fail on a pure SSH session without a display.
 
 Specs live under `e2e/` (signup, login, deposit).
 

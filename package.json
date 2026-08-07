@@ -36,6 +36,7 @@
     "test": "react-app-rewired test",
     "test:ci": "CI=true react-app-rewired test --watchAll=false --coverage --coverageReporters=text-summary",
     "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "eject": "react-scripts eject"
   },
@@ -63,6 +64,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.3",
     "react-app-rewired": "^2.2.1",
+    "socket.io": "^4.8.3",
     "tailwindcss": "^3.4.13"
   }
 }

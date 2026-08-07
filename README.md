@@ -16,8 +16,41 @@ You may also see any lint errors in the console.
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Launches the Jest + React Testing Library runner in interactive watch mode.
+
+### `npm run test:ci`
+
+Runs the full suite once (no watch), with a coverage summary. Use this in CI:
+
+```bash
+npm run test:ci
+```
+
+**Current coverage focus**
+
+- Auth helpers (`surecoin-auth-payload`)
+- API client URL/auth headers (`fetch-request`)
+- Signup page validation + success path
+- Login modal form (`body-login`)
+- Deposit/withdraw modal (`deposit-modal`)
+
+Helpers live under `src/test-utils/`. API calls are mocked — tests do not hit production.
+
+### `npm run test:e2e`
+
+Runs Playwright end-to-end tests against a local CRA server on port 3010.
+SureCoin REST is mocked in-browser (`page.route`) — no backend required.
+
+First-time setup (install Chromium once):
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Interactive UI mode: `npm run test:e2e:ui`
+
+Specs live under `e2e/` (signup, login, deposit).
 
 ### `npm run build`
 

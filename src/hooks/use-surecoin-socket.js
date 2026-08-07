@@ -284,15 +284,34 @@ const useSurecoinSocket = () => {
     });
 
     socket.on("bet:resolved", (payload) => {
+      const won = Boolean(payload?.won);
+      const payout =
+        payload?.payout != null && Number.isFinite(Number(payload.payout))
+          ? Number(payload.payout)
+          : null;
+
       roundDispatch({
         type: "SET_LAST_RESOLVED",
         payload: {
-          betId: payload.bet_id,
-          roundId: payload.round_id,
-          win: payload.won,
-          payout: payload.payout,
+          betId: payload?.bet_id ?? null,
+          roundId: payload?.round_id ?? null,
+          win: won,
+          payout,
         },
       });
+
+      if (won) {
+        roundDispatch({
+          type: "PUSH_WIN_TOAST",
+          payload: {
+            betId: payload?.bet_id ?? null,
+            roundId: payload?.round_id ?? null,
+            payout,
+            at: Date.now(),
+          },
+        });
+      }
+
       refreshBalance();
     });
 

@@ -8,6 +8,7 @@ import BettingSidebar from "./betting-sidebar";
 import GameDisplay from "./game-display";
 import CoinStakeChoice from "./coin-stake-choice";
 import TrustFooter from "./trust-footer";
+import WinToast from "./win-toast";
 import {
     isSurecoinAudioUnlocked,
     preloadSurecoinSpinSound,
@@ -16,7 +17,13 @@ import {
 
 const SureCoinIndex = () => {
     const [state, dispatch] = useContext(Context);
-    const { roundStats, isSpinning, state: roundState } = useSureCoinRound();
+    const {
+        roundStats,
+        isSpinning,
+        state: roundState,
+        dispatch: roundDispatch,
+    } = useSureCoinRound();
+    const winToast = roundState.winToast;
     const [userCoinCount] = useState(1);
     const [userMuted, setUserMuted] = useState(
         () => !isSurecoinAudioUnlocked()
@@ -121,6 +128,10 @@ const SureCoinIndex = () => {
         return undefined;
     }, [isOnline]);
 
+    const dismissWinToast = useCallback(() => {
+        roundDispatch({ type: "CLEAR_WIN_TOAST" });
+    }, [roundDispatch]);
+
     const enableSoundFromGesture = useCallback(async () => {
         const ok = await unlockSurecoinAudio();
         if (ok) {
@@ -161,6 +172,14 @@ const SureCoinIndex = () => {
 
     return (
         <div className="launched-sure-coin">
+            <WinToast
+                key={winToast?.at || "idle"}
+                win={Boolean(winToast)}
+                payout={winToast?.payout}
+                visible={Boolean(winToast)}
+                onDismiss={dismissWinToast}
+            />
+
             <div className="surecoin-body">
                 {userSoundSet === false && (
                     <SoundInteractPrompt

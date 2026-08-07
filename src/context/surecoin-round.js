@@ -16,6 +16,8 @@ export const initialRoundState = {
   winningSide: null,
   myBet: null,
   lastResolved: null,
+  /** Personal win pop from bet:resolved (won truthy). Mute must not gate this. */
+  winToast: null,
   config: {
     minBetAmount: 5,
     payoutMultiplier: 2,
@@ -73,6 +75,23 @@ const roundReducer = (state, action) => {
       return { ...state, myBet: action.payload };
     case "SET_LAST_RESOLVED":
       return { ...state, lastResolved: action.payload };
+    case "PUSH_WIN_TOAST": {
+      const payload = action.payload || {};
+      return {
+        ...state,
+        winToast: {
+          betId: payload.betId ?? payload.bet_id ?? null,
+          roundId: payload.roundId ?? payload.round_id ?? null,
+          payout:
+            payload.payout != null && Number.isFinite(Number(payload.payout))
+              ? Number(payload.payout)
+              : null,
+          at: payload.at ?? Date.now(),
+        },
+      };
+    }
+    case "CLEAR_WIN_TOAST":
+      return { ...state, winToast: null };
     case "ADD_LIVE_BET":
       return {
         ...state,

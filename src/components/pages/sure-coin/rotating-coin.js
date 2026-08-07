@@ -86,7 +86,6 @@ const RotatingCoin = (props) => {
     } = props;
     const [state] = useContext(Context);
     const { state: roundState } = useSureCoinRound();
-    const [spinOutcome, setSpinOutcome] = useState(null);
     const [coinOnDisplay, setCoinOnDisplay] = useState("heads");
     const [isSettling, setIsSettling] = useState(false);
     /** Keep yaw CSS spin alive after FLIPPING ends until settle can start (avoids dead frame). */
@@ -108,7 +107,6 @@ const RotatingCoin = (props) => {
     const publishSettledSide = (rawSide) => {
         const side = normalizeSide(rawSide);
         if (!side) return null;
-        setSpinOutcome(side);
         setCoinOnDisplay(side);
         if (typeof onOutcomeChangeRef.current === "function") {
             onOutcomeChangeRef.current(side.toUpperCase());
@@ -117,7 +115,6 @@ const RotatingCoin = (props) => {
     };
 
     const clearOutcome = () => {
-        setSpinOutcome(null);
         setCoinOnDisplay(null);
         if (typeof onOutcomeChangeRef.current === "function") {
             onOutcomeChangeRef.current(null);
@@ -138,10 +135,10 @@ const RotatingCoin = (props) => {
             return;
         }
 
+        // Win UI is WinToast only (no on-coin notify-win pop). Never set lost —
+        // losses must not show any fail/lost alert overlay.
         if (roundState.lastResolved?.win === true) {
             setWon("won");
-        } else if (roundState.lastResolved?.win === false) {
-            setWon("lost");
         } else {
             setWon(null);
         }
@@ -232,7 +229,7 @@ const RotatingCoin = (props) => {
     }, [roundState.lastResolved?.win, usermuted, userSoundSet]);
 
     useEffect(() => {
-        if (won === "won" || won === "lost") {
+        if (won === "won") {
             const timer = setTimeout(() => setWon(null), 3000);
             return () => clearTimeout(timer);
         }
@@ -332,11 +329,6 @@ const RotatingCoin = (props) => {
               ? "is-settling"
               : "";
 
-    const payout =
-        roundState.lastResolved?.payout ??
-        roundState.myBet?.possibleWin ??
-        state?.coinselections?.[coinnumber]?.amount * 2;
-
     return (
         <div
             className="relative sc-coin-stage"
@@ -346,32 +338,6 @@ const RotatingCoin = (props) => {
                 className={`sc-coin-ground-shadow${visuallySpinning ? " is-spinning" : ""}${isSettling ? " is-settling" : ""}`}
                 aria-hidden="true"
             />
-            <div className="notify-win-container">
-                <div className={`flex capitalize notify-win ${won === "won" ? "won" : won === "lost" ? "lost" : ""}`}>
-                    <span className="flex-col">
-                        Outcome
-                        <br />
-                        <span className="font-bold uppercase">{spinOutcome}</span>
-                    </span>
-                    <span className="flex-col ml-2 won-amount">
-                        {won === "won" && (
-                            <>
-                                WON
-                                <br />
-                            </>
-                        )}
-                        <span className="font-bold won-expanding">
-                            {won === "won" ? (
-                                <span>
-                                    KES. <span>{Number(payout || 0).toFixed(2)}</span>
-                                </span>
-                            ) : (
-                                <span className="mt-2 block">X</span>
-                            )}
-                        </span>
-                    </span>
-                </div>
-            </div>
             {/*
               Pivot holds static view only (no animated rotateX).
               Mesh spins purely with rotateY about the vertical axis.

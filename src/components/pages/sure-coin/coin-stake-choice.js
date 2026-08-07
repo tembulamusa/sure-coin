@@ -60,7 +60,6 @@ const CoinStakeChoice = (props) => {
     const payoutMultiplier = roundState.config?.payoutMultiplier ?? 2;
     const user = state?.user || getFromLocalStorage("user");
     const hasConfirmedBet = Boolean(roundState.myBet);
-    const confirmed = userPlaceBetOn && hasConfirmedBet;
     const hasNextRoundQueue = Boolean(pendingBet);
     const phase = roundState.phase;
 
@@ -343,6 +342,14 @@ const CoinStakeChoice = (props) => {
         }
     }, [roundState.myBet]);
 
+    // When the coin starts rolling, release HEADS/TAILS selection highlight.
+    // Outcome "Your pick" stays on myBet; Confirm stays CONFIRMED while myBet exists.
+    useEffect(() => {
+        if (!isspinning) return;
+        if (pendingBetRef.current) return;
+        setPickedBtn(null);
+    }, [isspinning]);
+
     // On bet rejection / timeout alert, allow re-confirm / clear stale pending.
     useEffect(() => {
         const alert = state?.coinsAlertMsg;
@@ -460,16 +467,16 @@ const CoinStakeChoice = (props) => {
     }, [state?.promptdepositrequest]);
 
     const hasPick = pickedBtn || state?.coinselections?.[coinnumber]?.pick;
-    const sideLocked =
-        !canSelectSide({ phase, myBet: roundState.myBet }) ||
-        (phase === "WAITING" && hasConfirmedBet);
+    // After bet:accepted, release HEADS/TAILS (no disabled hold for the flip).
+    const sideLocked = !canSelectSide({ phase, myBet: roundState.myBet });
     const confirmDisabled =
         !canConfirmPick({ hasPick, phase, myBet: roundState.myBet }) ||
-        (phase === "WAITING" && confirmed);
+        hasConfirmedBet;
 
     let confirmLabel = "CONFIRM PICK";
     let confirmClass = "";
-    if (confirmed && phase === "WAITING") {
+    // Keep CONFIRMED while myBet exists for this round (not only during WAITING).
+    if (hasConfirmedBet) {
         confirmLabel = "CONFIRMED";
         confirmClass = "confirmed";
     } else if (hasNextRoundQueue) {
@@ -589,7 +596,7 @@ const CoinStakeChoice = (props) => {
                 >
                     <img src={HeadsCoin} alt="" className="sc-side-coin" />
                     HEADS
-                    {hasPick === "heads" && <FaCheck className="sc-picked-check" />}
+                    {pickedBtn === "heads" && <FaCheck className="sc-picked-check" />}
                 </button>
                 <button
                     type="button"
@@ -599,7 +606,7 @@ const CoinStakeChoice = (props) => {
                 >
                     <img src={TailsCoin} alt="" className="sc-side-coin" />
                     TAILS
-                    {hasPick === "tails" && <FaCheck className="sc-picked-check" />}
+                    {pickedBtn === "tails" && <FaCheck className="sc-picked-check" />}
                 </button>
                 <button
                     type="button"

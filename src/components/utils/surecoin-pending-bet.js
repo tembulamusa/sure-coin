@@ -14,19 +14,20 @@ export const createPendingBet = (pick, amount) => {
 };
 
 /** True when the user may change HEADS/TAILS for UI purposes. */
-export const canSelectSide = ({ phase, myBet }) => {
-  // Locked only after a bet is accepted for the current WAITING window.
-  if (phase === "WAITING" && myBet) return false;
+export const canSelectSide = () => {
+  // Side buttons stay selectable after bet:accepted so the hold clears;
+  // confirm remains gated by myBet via canConfirmPick.
   return true;
 };
 
 /**
  * True when Confirm should be clickable (auth checked separately on click).
  * Pending queue still allows re-confirm to update side/amount.
+ * Accepted bets stay non-confirmable until the next round clears myBet.
  */
 export const canConfirmPick = ({ hasPick, phase, myBet }) => {
   if (!hasPick) return false;
-  if (phase === "WAITING" && myBet) return false;
+  if (myBet) return false;
   return true;
 };
 

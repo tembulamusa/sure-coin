@@ -24,11 +24,12 @@ const GameDisplay = ({
   const displayOutcome =
     lastOutcome ||
     (roundState.phase === "RESULT" ? roundState.winningSide : null);
+  const userPick = roundState.myBet?.coinSide ?? null;
 
   return (
     <div className="sc-game-display">
       <div className="sc-game-stage">
-        <OutcomePanel outcome={displayOutcome} />
+        <OutcomePanel outcome={displayOutcome} userPick={userPick} />
 
         {/* Flex absorber: shrinks/grows with viewport; coin scales inside */}
         <div className="sc-coin-canvas">
@@ -50,7 +51,7 @@ const GameDisplay = ({
           </div>
         </div>
 
-        <RoundStatsPanel startRound={roundStats?.round} roundStats={roundStats} />
+        <RoundStatsPanel roundStats={roundStats} />
       </div>
 
       <div className="sc-game-footer">
